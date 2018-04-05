@@ -1,43 +1,31 @@
 #pragma once
 
 /**
- * @brief ofxGrafica axis types
+ * @brief The maximum bristle length
  */
-enum ofxGAxisType {
-	GRAFICA_X_AXIS, GRAFICA_Y_AXIS, GRAFICA_TOP_AXIS, GRAFICA_RIGHT_AXIS
-};
+const float MAX_BRISTLE_LENGTH = 15.0;
 
 /**
- * @brief ofxGrafica text alignment options
+ * @brief The maximum bristle thickness
  */
-enum ofxGTextAlignment {
-	GRAFICA_CENTER_ALIGN, GRAFICA_LEFT_ALIGN, GRAFICA_RIGHT_ALIGN, GRAFICA_TOP_ALIGN, GRAFICA_BOTTOM_ALIGN
-};
+const float MAX_BRISTLE_THICKNESS = 5.0;
 
 /**
- * @brief ofxGrafica line directions
+ * @brief The number of positions to use to calculate the brush average position
  */
-enum ofxGDirection {
-	GRAFICA_HORIZONTAL_DIRECTION, GRAFICA_VERTICAL_DIRECTION, GRAFICA_BOTH_DIRECTIONS
-};
+const int POSITIONS_FOR_AVERAGE = 4;
 
 /**
- * @brief ofxGrafica histogram types
+ * @brief The noise range to add to the bristles vertical position on the brush
  */
-enum ofxGHistogramType {
-	GRAFICA_HORIZONTAL_HISTOGRAM, GRAFICA_VERTICAL_HISTOGRAM
-};
+const float BRISTLE_VERTICAL_NOISE = 8;
 
 /**
- * @brief ofxGrafica contour types
+ * @brief The maximum noise range to add in each update to the bristles horizontal position on the brush
  */
-enum ofxGContourType {
-	GRAFICA_HORIZONTAL_CONTOUR, GRAFICA_VERTICAL_CONTOUR
-};
+const float MAX_BRISTLE_HORIZONTAL_NOISE = 4;
 
 /**
- * @brief ofxGrafica key modifiers
+ * @brief Controls the bristles horizontal noise speed
  */
-enum ofxGKeyModifiers {
-	GRAFICA_NONE_MODIFIER = -1
-};
+const float NOISE_SPEED_FACTOR = 0.04;

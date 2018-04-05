@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ofMain.h"
-#include "ofxOilConstants.h"
+#include "ofxOilBristle.h"
 
 /**
  * @brief Brush class
@@ -14,9 +14,17 @@ public:
 	/**
 	 * @brief Constructor
 	 */
-	ofxOilBrush();
-
+	ofxOilBrush(float size);
 
 protected:
-
+	ofVec2f position;
+	int nBristles;
+	vector<ofxOilBristle> bristles;
+	vector<ofVec2f> bOffsets;
+	vector<ofVec2f> bPositions;
+	vector<ofVec2f> positionsHistory;
+	ofVec2f averagePosition;
+	float noiseSeed;
+	int updatesCounter;
+	float bristleHorizontalNoise;
 };

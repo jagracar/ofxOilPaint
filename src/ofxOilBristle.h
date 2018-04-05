@@ -15,12 +15,12 @@ public:
 	 */
 	ofxOilBristle(int nElements, float thickness);
 
-	void setPosition(const ofVec3f& newPosition);
-	void updatePosition(const ofVec3f& newPosition);
+	void setPosition(const ofVec2f& newPosition);
+	void updatePosition(const ofVec2f& newPosition);
 	void paintOnScreen(const ofColor& col);
 
 protected:
-	vector<ofVec3f> positions;
+	vector<ofVec2f> positions;
 	vector<float> lengths;
 	vector<float> thicknesses;
 };
