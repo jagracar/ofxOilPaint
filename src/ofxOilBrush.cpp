@@ -38,29 +38,27 @@ void ofxOilBrush::update(const ofVec2f& newPosition, bool updateBristleElements)
 	int historySize = positionsHistory.size();
 
 	if (historySize < POSITIONS_FOR_AVERAGE) {
-		positionsHistory.push_back(newPosition);
-		historySize++;
+		positionsHistory.emplace_back(newPosition.x, newPosition.y);
+		++historySize;
 	} else {
 		positionsHistory[updatesCounter % POSITIONS_FOR_AVERAGE].set(newPosition);
 	}
 
 	// Calculate the new average position
-	float xNewAverage = 0;
-	float yNewAverage = 0;
+	ofVec2f newAveragePosition = ofVec2f();
 
 	for (const ofVec2f& pos : positionsHistory) {
-		xNewAverage += pos.x;
-		yNewAverage += pos.y;
+		newAveragePosition += pos;
 	}
 
-	xNewAverage /= historySize;
-	yNewAverage /= historySize;
+	newAveragePosition /= historySize;
 
 	// Calculate the direction angle
-	float directionAngle = HALF_PI + atan2(yNewAverage - averagePosition.y, xNewAverage - averagePosition.x);
+	float directionAngle = HALF_PI
+			+ atan2(newAveragePosition.y - averagePosition.y, newAveragePosition.x - averagePosition.x);
 
 	// Update the average position
-	averagePosition.set(xNewAverage, yNewAverage);
+	averagePosition.set(newAveragePosition);
 
 	// Update the bristles positions array
 	updateBristlePositions(directionAngle);
@@ -91,7 +89,7 @@ void ofxOilBrush::updateBristlePositions(float directionAngle) {
 
 		for (int bristle = 0; bristle < nBristles; ++bristle) {
 			// Add some horizontal noise to make it look more realistic
-			ofVec2f& offset = bOffsets[bristle];
+			const ofVec2f& offset = bOffsets[bristle];
 			float x = offset.x + bristleHorizontalNoise * (ofNoise(noisePos + 0.1 * bristle) - 0.5);
 			float y = offset.y;
 
@@ -109,14 +107,10 @@ void ofxOilBrush::paint(const ofColor& color) const {
 	}
 }
 
-void ofxOilBrush::paint(const vector<ofColor>& colors, int alpha) const {
+void ofxOilBrush::paint(const vector<ofColor>& colors, unsigned char alpha) const {
 	if (positionsHistory.size() == POSITIONS_FOR_AVERAGE) {
-		// Shift the alpha value
-		alpha = alpha << 24;
-
-		// Paint the bristles
 		for (int bristle = 0; bristle < nBristles; ++bristle) {
-			bristles[bristle].paint(colors[bristle]);
+			bristles[bristle].paint(ofColor(colors[bristle], alpha));
 		}
 	}
 }

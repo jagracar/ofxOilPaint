@@ -4,7 +4,7 @@
 #include "ofxOilBrush.h"
 
 /**
- * @brief Trace class
+ * @brief Class that simulates the movement of a brush on the canvas
  *
  * @author Javier Graciá Carpio
  */
@@ -13,19 +13,73 @@ public:
 
 	/**
 	 * @brief Constructor
+	 *
+	 * @param position the trace initial position
+	 * @param nSteps the total number of steps in the trace trajectory
+	 * @param speed the trace moving speed
 	 */
-	ofxOilTrace(const ofVec2f& position=ofVec2f(), int nSteps=20, float speed=5);
+	ofxOilTrace(const ofVec2f& position = ofVec2f(), int nSteps = 20, float speed = 2);
 
-	//bool hasValidTrajectory(const vector<bool>& similarColor, const vector<bool>& visitedPixels, const ofImage& originalImg);
+	/**
+	 * @brief Defines the brush size that should be used to paint the trace
+	 *
+	 * @param brushSize the brush size
+	 */
 	void setBrushSize(float brushSize);
-	void paintOnScreen(const ofColor& col);
+
+	/**
+	 * @brief Returns the image average color along the trace
+	 *
+	 * @param img the image
+	 * @return the image average color
+	 */
+	ofColor calculateAverageColor(const ofImage& img);
+
+	/**
+	 * @brief Calculates the trace bristle colors
+	 *
+	 * @param col the trace initial color
+	 */
+	void calculateColors(const ofColor& col);
+
+	/**
+	 * @brief Paints the trace
+	 */
+	void paint();
+
+	/**
+	 * @brief Paints the trace for a given trajectory step
+	 *
+	 * @param step the trajectory step
+	 */
+	void paintStep(int step);
+
+	/**
+	 * @brief Returns the number of steps in the trace trajectory
+	 *
+	 * @return the total number of steps in the trace trajectory
+	 */
 	int getNSteps();
 
 protected:
-	int nSteps;
+
+	/**
+	 * @brief The trace trajectory positions
+	 */
 	vector<ofVec2f> positions;
+
+	/**
+	 * @brief The trace bristle colors along the trajectory
+	 */
 	vector<vector<ofColor>> colors;
-	vector<int> alphas;
+
+	/**
+	 * @brief The colors alpha values along the trajectory
+	 */
+	vector<unsigned char> alphas;
+
+	/**
+	 * @brief The trace brush
+	 */
 	ofxOilBrush brush;
-	int nBristles;
 };
