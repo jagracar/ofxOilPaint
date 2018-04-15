@@ -22,7 +22,7 @@ void ofxOilBristle::updatePosition(const ofVec2f& newPosition) {
 	positions[0].set(newPosition);
 
 	for (vector<ofVec2f>::size_type i = 1; i < positions.size(); ++i) {
-		ofVec2f& previousPos = positions[i - 1];
+		const ofVec2f& previousPos = positions[i - 1];
 		ofVec2f& pos = positions[i];
 		float length = lengths[i];
 		float ang = atan2(previousPos.y - pos.y, previousPos.x - pos.x);
@@ -30,7 +30,7 @@ void ofxOilBristle::updatePosition(const ofVec2f& newPosition) {
 	}
 }
 
-void ofxOilBristle::paintOnScreen(const ofColor& col) {
+void ofxOilBristle::paint(const ofColor& col) const {
 	// Set the stroke color
 	ofSetColor(col);
 
