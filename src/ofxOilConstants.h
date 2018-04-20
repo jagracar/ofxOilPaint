@@ -109,4 +109,4 @@ const float MIX_STRENGTH = 0.012;
 /**
  * @brief The minimum alpha value to be considered for the trace average color calculation
  */
-const int MIN_ALPHA = 20;
+const unsigned char MIN_ALPHA = 20;
