@@ -12,26 +12,57 @@ class ofxOilBrush {
 public:
 
 	/**
+	 * @brief The maximum bristle length
+	 */
+	static float MAX_BRISTLE_LENGTH;
+
+	/**
+	 * @brief The maximum bristle thickness
+	 */
+	static float MAX_BRISTLE_THICKNESS;
+
+	/**
+	 * @brief The maximum noise range to add in each update to the bristles horizontal position on the brush
+	 */
+	static float MAX_BRISTLE_HORIZONTAL_NOISE;
+
+	/**
+	 * @brief The noise range to add to the bristles vertical position on the brush
+	 */
+	static float BRISTLE_VERTICAL_NOISE;
+
+	/**
+	 * @brief Controls the bristles horizontal noise speed
+	 */
+	static float NOISE_SPEED_FACTOR;
+
+	/**
+	 * @brief The number of positions to use to calculate the brush average position
+	 */
+	static unsigned int POSITIONS_FOR_AVERAGE;
+
+	/**
 	 * @brief Constructor
 	 *
-	 * @param size the brush size
+	 * @param _position the brush central position
+	 * @param _size the brush size
 	 */
-	ofxOilBrush(float size = 5);
+	ofxOilBrush(const ofVec2f& _position = ofVec2f(), float _size = 5);
 
 	/**
-	 * @brief Moves the brush to a new position and resets some internal counters
+	 * @brief Moves the brush to a new position and resets some internal variables
 	 *
-	 * @param newPosition the new position
+	 * @param newPosition the new brush central position
 	 */
-	void init(const ofVec2f& newPosition);
+	void resetPosition(const ofVec2f& newPosition);
 
 	/**
-	 * @brief Updates the brush properties
+	 * @brief Updates the brush to a new central position
 	 *
-	 * @param newPosition the new position
-	 * @param updateBristleElements true if the bristles element positions should be updated
+	 * @param newPosition the new brush central position
+	 * @param updateBristlesElements true if the bristles elements positions should be updated
 	 */
-	void update(const ofVec2f& newPosition, bool updateBristleElements);
+	void updatePosition(const ofVec2f& newPosition, bool updateBristlesElements = true);
 
 	/**
 	 * @brief Paints the brush using the provided color
@@ -41,9 +72,9 @@ public:
 	void paint(const ofColor& color) const;
 
 	/**
-	 * @brief Paints the brush using the provided bristle colors
+	 * @brief Paints the brush using the provided bristles colors
 	 *
-	 * @param colors the bristle colors
+	 * @param colors the bristles colors
 	 * @param alpha the colors alpha value
 	 */
 	void paint(const vector<ofColor>& colors, unsigned char alpha) const;
@@ -53,23 +84,16 @@ public:
 	 *
 	 * @return the total number of bristles in the brush
 	 */
-	int getNBristles() const;
+	unsigned int getNBristles() const;
 
 	/**
 	 * @brief Returns the current bristles positions
 	 *
 	 * @return a vector with the current bristles positions
 	 */
-	vector<ofVec2f> getBristlesPositions() const;
+	const vector<ofVec2f> getBristlesPositions() const;
 
 protected:
-
-	/**
-	 * @brief Updates the bristle positions vectors
-	 *
-	 * @param directionAngle the brush movement direction angle
-	 */
-	void updateBristlePositions(float directionAngle);
 
 	/**
 	 * @brief The brush central position
@@ -77,14 +101,29 @@ protected:
 	ofVec2f position;
 
 	/**
-	 * @brief The total number of bristles in the brush
+	 * @brief The brush size
 	 */
-	int nBristles;
+	float size;
 
 	/**
-	 * @brief The brush's bristles
+	 * @brief The bristles length
 	 */
-	vector<ofxOilBristle> bristles;
+	float bristlesLength;
+
+	/**
+	 * @brief The bristles thickness
+	 */
+	float bristlesThickness;
+
+	/**
+	 * @brief The bristles horizontal noise factor
+	 */
+	float bristlesHorizontalNoise;
+
+	/**
+	 * @brief The bristles horizontal noise seed
+	 */
+	float bristlesHorizontalNoiseSeed;
 
 	/**
 	 * @brief The bristles offset positions relative to the brush center
@@ -97,27 +136,22 @@ protected:
 	vector<ofVec2f> bPositions;
 
 	/**
-	 * @brief An array containing the bush central positions from the last updates
+	 * @brief The brush bristles
 	 */
-	vector<ofVec2f> positionsHistory;
+	vector<ofxOilBristle> bristles;
 
 	/**
-	 * @brief The average bush central position, considering the last updates
+	 * @brief The average bush central position, considering the last position updates
 	 */
 	ofVec2f averagePosition;
 
 	/**
-	 * @brief The horizontal noise seed
+	 * @brief An array containing the bush central positions from the last position updates
 	 */
-	float noiseSeed;
+	vector<ofVec2f> positionsHistory;
 
 	/**
-	 * @brief Counts the number of times that the brush has been updated
+	 * @brief Counts the number of times that the brush central position has been updated
 	 */
 	int updatesCounter;
-
-	/**
-	 * @brief The bristles horizontal noise factor
-	 */
-	float bristleHorizontalNoise;
 };

@@ -13,17 +13,10 @@ public:
 	/**
 	 * @brief Constructor
 	 *
-	 * @param nElements the total number of bristle elements
-	 * @param thickness the thickness of the first bristle element
+	 * @param position the bristle position
+	 * @param length the bristle total length
 	 */
-	ofxOilBristle(int nElements = 5, float thickness = 5);
-
-	/**
-	 * @brief Moves all the bristle elements to a new position
-	 *
-	 * @param newPosition the new bristle elements position
-	 */
-	void setPosition(const ofVec2f& newPosition);
+	ofxOilBristle(const ofVec2f& position = ofVec2f(), float length = 10);
 
 	/**
 	 * @brief Updates the bristle position
@@ -33,11 +26,33 @@ public:
 	void updatePosition(const ofVec2f& newPosition);
 
 	/**
+	 * @brief Sets the bristle elements positions
+	 *
+	 * @param newPosition the new bristle elements position
+	 */
+	void setElementsPositions(const ofVec2f& newPosition);
+
+	/**
+	 * @brief Sets the bristle elements lengths
+	 *
+	 * @param newLengths the new bristle elements lengths
+	 */
+	void setElementsLengths(const vector<float>& newLengths);
+
+	/**
 	 * @brief Paints the bristle
 	 *
-	 * @param col the color to use
+	 * @param color the color to use
+	 * @param thickness the thickness of the first bristle element
 	 */
-	void paint(const ofColor& col) const;
+	void paint(const ofColor& color, float thickness) const;
+
+	/**
+	 * @brief Returns the number of bristle elements
+	 *
+	 * @return the number of bristle elements
+	 */
+	unsigned int getNElements() const;
 
 protected:
 
@@ -50,9 +65,4 @@ protected:
 	 * @brief The bristle elements lengths
 	 */
 	vector<float> lengths;
-
-	/**
-	 * @brief The bristle elements thicknesses
-	 */
-	vector<float> thicknesses;
 };
