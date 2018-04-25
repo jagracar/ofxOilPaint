@@ -119,9 +119,13 @@ void ofxOilBrush::updatePosition(const ofVec2f& newPosition, bool updateBristles
 
 void ofxOilBrush::paint(const ofColor& color) const {
 	if (positionsHistory.size() == POSITIONS_FOR_AVERAGE) {
+		ofPushStyle();
+
 		for (const ofxOilBristle& bristle : bristles) {
 			bristle.paint(color, bristlesThickness);
 		}
+
+		ofPopStyle();
 	}
 }
 
@@ -132,9 +136,13 @@ void ofxOilBrush::paint(const vector<ofColor>& colors, unsigned char alpha) cons
 	}
 
 	if (positionsHistory.size() == POSITIONS_FOR_AVERAGE) {
+		ofPushStyle();
+
 		for (unsigned int i = 0, nBristles = getNBristles(); i < nBristles; ++i) {
 			bristles[i].paint(ofColor(colors[i], alpha), bristlesThickness);
 		}
+
+		ofPopStyle();
 	}
 }
 

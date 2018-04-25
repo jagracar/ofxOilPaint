@@ -4,11 +4,21 @@
 
 float ofxOilTrace::NOISE_FACTOR = 0.007;
 
+unsigned char ofxOilTrace::MIN_ALPHA = 20;
+
+float ofxOilTrace::BRIGHTNESS_RELATIVE_CHANGE = 0.09;
+
+unsigned int ofxOilTrace::TYPICAL_MIX_STARTING_STEP = 5;
+
+float ofxOilTrace::MIX_STRENGTH = 0.012;
+
+array<int, 3> ofxOilTrace::MAX_COLOR_DIFFERENCE = { 40, 40, 40 };
+
+float ofxOilTrace::MAX_VISITS_FRACTION_IN_TRAJECTORY = 0.35;
+
 float ofxOilTrace::MIN_INSIDE_FRACTION_IN_TRAJECTORY = 0.4;
 
 float ofxOilTrace::MAX_SIMILAR_COLOR_FRACTION_IN_TRAJECTORY = 0.6;
-
-float ofxOilTrace::MAX_VISITS_FRACTION_IN_TRAJECTORY = 0.35;
 
 float ofxOilTrace::MAX_COLOR_STDEV_IN_TRAJECTORY = 45;
 
@@ -16,11 +26,7 @@ float ofxOilTrace::MIN_INSIDE_FRACTION = 0.7;
 
 float ofxOilTrace::MAX_SIMILAR_COLOR_FRACTION = 0.8; // 0.8 - 0.85 - 0.5
 
-unsigned char ofxOilTrace::MIN_ALPHA = 20;
-
-array<int, 3> ofxOilTrace::MAX_COLOR_DIFFERENCE = { 40, 40, 40 };
-
-float ofxOilTrace::MIN_PAINTED_FRACTION = 0.65;
+float ofxOilTrace::MAX_PAINTED_FRACTION = 0.65;
 
 float ofxOilTrace::MIN_COLOR_IMPROVEMENT_FACTOR = 0.6;
 
@@ -29,12 +35,6 @@ float ofxOilTrace::BIG_WELL_PAINTED_IMPROVEMENT_FRACTION = 0.3; // 0.3 - 0.35 - 
 float ofxOilTrace::MIN_BAD_PAINTED_REDUCTION_FRACTION = 0.45; // 0.45 - 0.3 - 0.45
 
 float ofxOilTrace::MAX_WELL_PAINTED_DESTRUCTION_FRACTION = 0.4; // 0.4 - 0.55 - 0.4
-
-float ofxOilTrace::BRIGHTNESS_RELATIVE_CHANGE = 0.09;
-
-unsigned int ofxOilTrace::TYPICAL_MIX_STARTING_STEP = 5;
-
-float ofxOilTrace::MIX_STRENGTH = 0.012;
 
 ofxOilTrace::ofxOilTrace(const ofVec2f& startingPosition, unsigned int nSteps, float speed) {
 	// Check that the input makes sense
@@ -72,29 +72,39 @@ ofxOilTrace::ofxOilTrace(const vector<ofVec2f>& _positions, const vector<unsigne
 	averageColor.set(0, 0);
 }
 
-void ofxOilTrace::setBrushSize(float brushSize) {
-	// Initialize the brush
-	brush = ofxOilBrush(positions[0], brushSize);
+bool ofxOilTrace::alreadyVisitedTrajectory(const ofPixels& visitedPixels) const {
+	// Extract some useful information
+	int width = visitedPixels.getWidth();
+	int height = visitedPixels.getHeight();
 
-	// Reset the average color
-	averageColor.set(0, 0);
+	// Obtain some pixel statistics along the trajectory
+	int insideCounter = 0;
+	int visitedCounter = 0;
 
-	// Reset the bristle containers
-	bPositions.clear();
-	bImgColors.clear();
-	bPaintedColors.clear();
-	bColors.clear();
-}
+	for (unsigned int i = ofxOilBrush::POSITIONS_FOR_AVERAGE, nSteps = getNSteps(); i < nSteps; ++i) {
+		// Check that the alpha value is high enough
+		if (alphas[i] >= MIN_ALPHA) {
+			// Check that the position is inside the image
+			const ofVec2f& pos = positions[i];
+			int x = pos.x;
+			int y = pos.y;
 
-void ofxOilTrace::setAverageColor(const ofColor& color) {
-	averageColor.set(color);
-	bColors.clear();
+			if (x >= 0 && x < width && y >= 0 && y < height) {
+				++insideCounter;
+
+				if (visitedPixels.getColor(x, y) == 0) {
+					++visitedCounter;
+				}
+			}
+		}
+	}
+
+	return visitedCounter > MAX_VISITS_FRACTION_IN_TRAJECTORY * insideCounter;
 }
 
 bool ofxOilTrace::hasValidTrajectory(const ofImage& img, const ofPixels& paintedPixels,
 		const ofColor& backgroundColor) const {
 	// Extract some useful information
-	unsigned int nSteps = getNSteps();
 	int width = img.getWidth();
 	int height = img.getHeight();
 
@@ -109,7 +119,7 @@ bool ofxOilTrace::hasValidTrajectory(const ofImage& img, const ofPixels& painted
 	float imgBlueSum = 0;
 	float imgBlueSqSum = 0;
 
-	for (unsigned int i = ofxOilBrush::POSITIONS_FOR_AVERAGE; i < nSteps; ++i) {
+	for (unsigned int i = ofxOilBrush::POSITIONS_FOR_AVERAGE, nSteps = getNSteps(); i < nSteps; ++i) {
 		// Check that the alpha value is high enough
 		if (alphas[i] >= MIN_ALPHA) {
 			// Check that the position is inside the image
@@ -159,12 +169,26 @@ bool ofxOilTrace::hasValidTrajectory(const ofImage& img, const ofPixels& painted
 	}
 
 	// Check if we have a valid trajectory
-	float maxSqDevSq = pow(MAX_COLOR_STDEV_IN_TRAJECTORY, 2);
 	bool insideCanvas = insideCounter >= MIN_INSIDE_FRACTION_IN_TRAJECTORY * (insideCounter + outsideCounter);
 	bool badPainted = similarColorCounter <= MAX_SIMILAR_COLOR_FRACTION_IN_TRAJECTORY * insideCounter;
+	float maxSqDevSq = pow(MAX_COLOR_STDEV_IN_TRAJECTORY, 2);
 	bool smallColorChange = imgRedStDevSq < maxSqDevSq && imgGreenStDevSq < maxSqDevSq && imgBlueStDevSq < maxSqDevSq;
 
 	return insideCanvas && badPainted && smallColorChange;
+}
+
+void ofxOilTrace::setBrushSize(float brushSize) {
+	// Initialize the brush
+	brush = ofxOilBrush(positions[0], brushSize);
+
+	// Reset the average color
+	averageColor.set(0, 0);
+
+	// Reset the bristle containers
+	bPositions.clear();
+	bImgColors.clear();
+	bPaintedColors.clear();
+	bColors.clear();
 }
 
 void ofxOilTrace::calculateBristlePositions() {
@@ -249,6 +273,13 @@ void ofxOilTrace::calculatePaintedColors(const ofPixels& paintedPixels, const of
 			}
 		}
 	}
+}
+
+void ofxOilTrace::setAverageColor(const ofColor& color) {
+	averageColor.set(color);
+
+	// Reset the bristle colors since they are not valid anymore
+	bColors.clear();
 }
 
 void ofxOilTrace::calculateAverageColor(const ofImage& img) {
@@ -448,7 +479,7 @@ bool ofxOilTrace::improvesPainting(const ofImage& img) {
 
 	bool outsideCanvas = insideCounter < MIN_INSIDE_FRACTION * (insideCounter + outsideCounter);
 	bool alreadyWellPainted = similarColorCounter > MAX_SIMILAR_COLOR_FRACTION * insideCounter;
-	bool alreadyPainted = paintedCounter >= MIN_PAINTED_FRACTION * insideCounter;
+	bool alreadyPainted = paintedCounter >= MAX_PAINTED_FRACTION * insideCounter;
 	bool colorImproves = colorImprovement >= MIN_COLOR_IMPROVEMENT_FACTOR * averageMaxColorDiff * paintedCounter;
 	bool bigWellPaintedImprovement = wellPaintedImprovement >= BIG_WELL_PAINTED_IMPROVEMENT_FRACTION * insideCounter;
 	bool reducedBadPainted = wellPaintedImprovement >= MIN_BAD_PAINTED_REDUCTION_FRACTION * previouslyBadPainted;
@@ -461,64 +492,141 @@ bool ofxOilTrace::improvesPainting(const ofImage& img) {
 }
 
 void ofxOilTrace::paint() {
-	// Check that it makes sense to paint the trace
-	if (bColors.size() > 0) {
-		for (int step = 0, nSteps = getNSteps(); step < nSteps; ++step) {
-			// Move the brush
-			brush.updatePosition(positions[step], true);
-
-			// Paint the brush
-			brush.paint(bColors[step], alphas[step]);
-		}
-
-		// Reset the brush to the initial position
-		brush.resetPosition(positions[0]);
+	// Check that the bristle colors have been calculated before running this method
+	if (bColors.size() == 0) {
+		throw logic_error("Please, run calculateBristleColors method before paint.");
 	}
+
+	for (unsigned int i = 0, nSteps = getNSteps(); i < nSteps; ++i) {
+		// Move the brush
+		brush.updatePosition(positions[i], true);
+
+		// Paint the brush
+		brush.paint(bColors[i], alphas[i]);
+	}
+
+	// Reset the brush to the initial position
+	brush.resetPosition(positions[0]);
 }
 
-void ofxOilTrace::paint(vector<bool>& visitedPixels, int width, int height) {
-	// Check that it makes sense to paint the trace
-	if (bColors.size() > 0) {
-		for (int step = 0, nSteps = getNSteps(); step < nSteps; ++step) {
-			// Move the brush
-			brush.updatePosition(positions[step], true);
-
-			// Paint the brush
-			brush.paint(bColors[step], alphas[step]);
-
-			// Fill the visited pixels array if alpha is high enough
-			if (alphas[step] >= MIN_ALPHA) {
-				for (const ofVec2f& pos : bPositions[step]) {
-					int x = pos.x;
-					int y = pos.y;
-
-					if (x >= 0 && x < width && y >= 0 && y < height) {
-						visitedPixels[x + y * width] = true;
-					}
-				}
-			}
-		}
-
-		// Reset the brush to the initial position
-		brush.resetPosition(positions[0]);
+void ofxOilTrace::paint(ofFbo& canvasBuffer) {
+	// Check that the bristle colors have been calculated before running this method
+	if (bColors.size() == 0) {
+		throw logic_error("Please, run calculateBristleColors method before paint.");
 	}
+
+	for (unsigned int i = 0, nSteps = getNSteps(); i < nSteps; ++i) {
+		// Move the brush
+		brush.updatePosition(positions[i], true);
+
+		// Paint the brush
+		brush.paint(bColors[i], alphas[i]);
+
+		// Paint the trace on the canvas only if alpha is high enough
+		if (alphas[i] >= MIN_ALPHA) {
+			canvasBuffer.begin();
+			brush.paint(bColors[i], 255);
+			canvasBuffer.end();
+		}
+	}
+
+	// Reset the brush to the initial position
+	brush.resetPosition(positions[0]);
 }
 
-void ofxOilTrace::paintStep(int step) {
+void ofxOilTrace::paintStep(unsigned int step) {
+	// Check that the bristle colors have been calculated before running this method
+	if (bColors.size() == 0) {
+		throw logic_error("Please, run calculateBristleColors method before paint.");
+	}
+
 	// Check that it makes sense to paint the given step
-	int nSteps = getNSteps();
-
-	if (step < nSteps && bColors.size() > 0) {
+	if (step < getNSteps()) {
 		// Move the brush
 		brush.updatePosition(positions[step], true);
 
 		// Paint the brush
 		brush.paint(bColors[step], alphas[step]);
 
-		// Check if we are at the last step
-		if (step == nSteps - 1) {
-			// Reset the brush to the initial position
+		// Reset the brush to the initial position if we are at the last trajectory step
+		if (step == getNSteps() - 1) {
 			brush.resetPosition(positions[0]);
+		}
+	}
+}
+
+void ofxOilTrace::paintStep(unsigned int step, ofFbo& canvasBuffer) {
+	// Check that the bristle colors have been calculated before running this method
+	if (bColors.size() == 0) {
+		throw logic_error("Please, run calculateBristleColors method before paint.");
+	}
+
+	// Check that it makes sense to paint the given step
+	if (step < getNSteps()) {
+		// Move the brush
+		brush.updatePosition(positions[step], true);
+
+		// Paint the brush
+		brush.paint(bColors[step], alphas[step]);
+
+		// Paint the trace on the canvas only if alpha is high enough
+		if (alphas[step] >= MIN_ALPHA) {
+			canvasBuffer.begin();
+			brush.paint(bColors[step], 255);
+			canvasBuffer.end();
+		}
+
+		// Reset the brush to the initial position if we are at the last trajectory step
+		if (step == getNSteps() - 1) {
+			brush.resetPosition(positions[0]);
+		}
+	}
+}
+
+void ofxOilTrace::setVisitedPixels(ofPixels& visitedPixels) {
+	// Extract some useful information
+	int width = visitedPixels.getWidth();
+	int height = visitedPixels.getHeight();
+
+	// Calculate the bristle positions if necessary
+	if (bPositions.size() == 0) {
+		calculateBristlePositions();
+	}
+
+	for (unsigned int i = 0, nSteps = getNSteps(); i < nSteps; ++i) {
+		// Fill the visited pixels array if alpha is high enough
+		if (alphas[i] >= MIN_ALPHA) {
+			for (const ofVec2f& pos : bPositions[i]) {
+				int x = pos.x;
+				int y = pos.y;
+
+				if (x >= 0 && x < width && y >= 0 && y < height) {
+					visitedPixels.setColor(x, y, ofColor(0));
+				}
+			}
+		}
+	}
+}
+
+void ofxOilTrace::setVisitedPixels(unsigned int step, ofPixels& visitedPixels) {
+	// Extract some useful information
+	int width = visitedPixels.getWidth();
+	int height = visitedPixels.getHeight();
+
+	// Calculate the bristle positions if necessary
+	if (bPositions.size() == 0) {
+		calculateBristlePositions();
+	}
+
+	// Fill the visited pixels array if alpha is high enough
+	if (alphas[step] >= MIN_ALPHA) {
+		for (const ofVec2f& pos : bPositions[step]) {
+			int x = pos.x;
+			int y = pos.y;
+
+			if (x >= 0 && x < width && y >= 0 && y < height) {
+				visitedPixels.setColor(x, y, ofColor(0));
+			}
 		}
 	}
 }
@@ -527,10 +635,18 @@ unsigned int ofxOilTrace::getNSteps() const {
 	return positions.size();
 }
 
-const vector<ofVec2f>& ofxOilTrace::getPositions() const {
+const vector<ofVec2f>& ofxOilTrace::getTrajectoryPositions() const {
 	return positions;
+}
+
+const vector<unsigned char>& ofxOilTrace::getTrajectoryAphas() const {
+	return alphas;
 }
 
 const vector<vector<ofVec2f>>& ofxOilTrace::getBristlePositions() const {
 	return bPositions;
+}
+
+const ofColor& ofxOilTrace::getAverageColor() const {
+	return averageColor;
 }
