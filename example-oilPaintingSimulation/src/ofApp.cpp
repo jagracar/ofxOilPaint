@@ -90,7 +90,7 @@ void ofApp::update() {
 							averageBrushSize - 2);
 
 					ofLogNotice() << "Frame = " << ofGetFrameNum() << ", traces = " << nTraces
-							<< ", new average brush size = " << averageBrushSize;
+							<< ", new average brush size = " << averageBrushSize << "";
 
 					// Reset some the counters
 					invalidTrajectoriesCounter = 0;
