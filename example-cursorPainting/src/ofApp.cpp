@@ -19,26 +19,26 @@ void ofApp::setup() {
 
 //--------------------------------------------------------------
 void ofApp::update() {
-	// Get the canvas painted pixels
-	canvas.readToPixels(paintedPixels);
-	int width = paintedPixels.getWidth();
-	int height = paintedPixels.getHeight();
+	// Get the canvas pixels
+	canvas.readToPixels(canvasPixels);
+	int width = canvasPixels.getWidth();
+	int height = canvasPixels.getHeight();
 
-	// Get the cursor path total length
-	float totalPathLength = cursorPath.getLengthAtIndex(cursorPath.size() - 1);
+	// Get the cursor current path length
+	float currentPathLength = cursorPath.getPerimeter();
 
-	// Paint the brush on the canvas step by step
+	// Paint the brush on the canvas, starting from the last painted point
 	canvas.begin();
 
-	while (nextPathLength < totalPathLength) {
+	while (nextPathLength < currentPathLength) {
 		// Update the brush position
-		const ofVec2f& newPosition = cursorPath.getPointAtLength(nextPathLength);
-		brush.updatePosition(newPosition, true);
+		const ofVec2f& pathPoint = cursorPath.getPointAtLength(nextPathLength);
+		brush.updatePosition(pathPoint, true);
 
 		// Get the bristle positions
 		const vector<ofVec2f>& bristlePositions = brush.getBristlesPositions();
 
-		// Mix the bristle colors with the color under the bristles positions
+		// Mix the current bristle colors with the color under the bristles positions
 		for (unsigned int i = 0; i < bristlePositions.size(); ++i) {
 			// Check that the bristle is inside the canvas
 			const ofVec2f& pos = bristlePositions[i];
@@ -46,26 +46,33 @@ void ofApp::update() {
 			int y = pos.y;
 
 			if (x >= 0 && x < width && y >= 0 && y < height) {
-				// Get the painted color under the bristle
-				const ofColor& color = paintedPixels.getColor(x, y);
+				// Get the color under the bristle
+				const ofColor& color = canvasPixels.getColor(x, y);
 
+				// Check if we are over a pixel that has been painted already
 				if (color != backgroundColor) {
 					// Mix the current bristle color with the painted color
-					bristleColors[i].lerp(color, 0.005 * color.getSaturation() / 255);
+					currentBristleColors[i].lerp(color, 0.001);
+
+					// Add some of the initial color
+					currentBristleColors[i].lerp(initialBristleColors[i], 0.001);
+				} else {
+					// Add some of the initial color
+					currentBristleColors[i].lerp(initialBristleColors[i], 0.05);
 				}
 			}
 		}
 
 		// Decrease the alpha value in each step
-		alphaValue -= 0.01 * nextPathLength;
+		alphaValue -= 1;
 
 		// Paint the brush on the canvas
 		if (alphaValue > 0) {
-			brush.paint(bristleColors, alphaValue);
+			brush.paint(currentBristleColors, alphaValue);
 		}
 
 		// Move to the next path length value
-		++nextPathLength;
+		nextPathLength += 1;
 	}
 
 	canvas.end();
@@ -94,34 +101,41 @@ void ofApp::mouseMoved(int x, int y) {
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button) {
-	// Check that we moved considerably
+	// Check that we moved enough
 	ofVec2f mousePos = ofVec2f(x, y);
 
-	if (cursorPath.getPointAtLength(nextPathLength).squareDistance(mousePos) > 5) {
+	if (mousePos.squareDistance(lastAddedPoint) > 5) {
+		// Add the point to the path
 		cursorPath.curveTo(mousePos);
+
+		// Save the last added point position
+		lastAddedPoint.set(mousePos);
 	}
 }
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button) {
 	// Create a new brush
-	brush = ofxOilBrush(ofVec2f(x, y), ofRandom(50, 70));
+	ofVec2f mousePos = ofVec2f(x, y);
+	brush = ofxOilBrush(mousePos, ofRandom(50, 70));
 
 	// Calculate the brush bristles colors
-	bristleColors.clear();
-	float hueValue = ofRandom(0, 255);
+	initialBristleColors.clear();
+	float hueValue = ofRandom(255);
 
 	for (unsigned int i = 0, nBristles = brush.getNBristles(); i < nBristles; ++i) {
-		bristleColors.push_back(ofColor::fromHsb(hueValue, 200, 200 + ofRandom(-5, 5)));
+		initialBristleColors.push_back(ofColor::fromHsb(hueValue, 200, 180 + ofRandom(-10, 10)));
 	}
 
+	currentBristleColors = initialBristleColors;
+
 	// Set the initial alpha value
-	alphaValue = 200;
+	alphaValue = 255;
 
 	// Start a new cursor path at the mouse position
 	cursorPath.clear();
-	cursorPath.curveTo(x, y);
-	cursorPath.curveTo(x, y);
+	cursorPath.curveTo(mousePos);
+	lastAddedPoint.set(mousePos);
 
 	// Reset the next path length variable
 	nextPathLength = 0;
@@ -130,7 +144,6 @@ void ofApp::mousePressed(int x, int y, int button) {
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button) {
 	// Finish the cursor path
-	cursorPath.curveTo(x, y);
 	cursorPath.curveTo(x, y);
 }
 

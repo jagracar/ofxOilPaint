@@ -21,10 +21,12 @@ public:
 
 	ofColor backgroundColor;
 	ofFbo canvas;
+	ofPixels canvasPixels;
 	ofxOilBrush brush;
-	vector<ofColor> bristleColors;
+	vector<ofColor> initialBristleColors;
+	vector<ofColor> currentBristleColors;
 	float alphaValue;
 	ofPolyline cursorPath;
+	ofVec2f lastAddedPoint;
 	float nextPathLength;
-	ofPixels paintedPixels;
 };
