@@ -6,6 +6,8 @@ Introduction
 
 An oil painting simulation addon for [openFrameworks](http://openframeworks.cc).
 
+[![Oil painting simulation](video_screenshot.png)](https://vimeo.com/82104781 "Oil painting simulation")
+
 Installation
 ------------
 
