@@ -3,27 +3,22 @@
 
 //--------------------------------------------------------------
 void ofApp::setup() {
-	// Do not clean the screen at the beginning of each frame
-	//ofSetBackgroundAuto(false);
-
-	// Set the desired frame rate
-	ofSetFrameRate(2000);
-	ofSetVerticalSync(false);
-
-	// Load the picture that we want to paint and resize it by the specified amount
-	img.load(pictureFile);
-	imgWidth = round(img.getWidth() / sizeReductionFactor);
-	imgHeight = round(img.getHeight() / sizeReductionFactor);
-	img.resize(imgWidth, imgHeight);
+	// Start the webcam
+	webcam.setDeviceID(0);
+	webcam.setDesiredFrameRate(webcamFrameRate);
+	webcam.setup(webcamWidth, webcamHeight);
 
 	// Resize the application window
 	if (comparisonMode) {
-		ofSetWindowShape(2 * imgWidth, imgHeight);
-	} else if (debugMode) {
-		ofSetWindowShape(3 * imgWidth, imgHeight);
+		ofSetWindowShape(2 * webcamWidth, webcamHeight);
 	} else {
-		ofSetWindowShape(imgWidth, imgHeight);
+		ofSetWindowShape(webcamWidth, webcamHeight);
 	}
+
+	// Initialize the image
+	img.allocate(webcamWidth, webcamHeight, OF_IMAGE_COLOR);
+	imgWidth = img.getWidth();
+	imgHeight = img.getHeight();
 
 	// Initialize the canvas where we will paint the image
 	canvas.allocate(imgWidth, imgHeight, GL_RGB, 2);
@@ -31,36 +26,57 @@ void ofApp::setup() {
 	ofClear(backgroundColor);
 	canvas.end();
 
-	// Initialize the canvas buffer if necessary
-	if (useCanvasBuffer) {
-		canvasBuffer.allocate(imgWidth, imgHeight, GL_RGB);
-		canvasBuffer.begin();
-		ofClear(backgroundColor);
-		canvasBuffer.end();
-	}
-
 	// Initialize all the pixel arrays
 	paintedPixels.allocate(imgWidth, imgHeight, OF_PIXELS_RGB);
 	similarColorPixels.allocate(imgWidth, imgHeight, OF_PIXELS_GRAY);
 	visitedPixels.allocate(imgWidth, imgHeight, OF_PIXELS_GRAY);
 	badPaintedPixels = vector<unsigned int>(imgWidth * imgHeight);
-
-	// Set the pixel arrays initial values
-	visitedPixels.setColor(ofColor(255));
-	updatePixelArrays();
-
-	// Initialize the rest of the sketch variables
-	averageBrushSize = max(smallerBrushSize, max(imgWidth, imgHeight) / 6.0f);
-	continuePainting = true;
-	obtainNewTrace = true;
-	traceStep = 0;
-	nTraces = 0;
+	nBadPaintedPixels = 0;
 }
 
 //--------------------------------------------------------------
 void ofApp::update() {
-	if (obtainNewTrace) {
+	// Update the webcam
+	webcam.update();
+
+	// Fill the image pixels with the current webcam pixels
+	img.setFromPixels(webcam.getPixels());
+
+	// Create an oil paint for the current image
+	createOilPaint();
+}
+
+//--------------------------------------------------------------
+void ofApp::draw() {
+	// Draw the canvas
+	if (comparisonMode) {
+		webcam.draw(0, 0);
+		canvas.draw(imgWidth, 0);
+	} else {
+		canvas.draw(0, 0);
+	}
+}
+
+//--------------------------------------------------------------
+void ofApp::createOilPaint() {
+	// Clean the canvas if necessary
+	if (startWithCleanCanvas) {
+		canvas.begin();
+		ofClear(backgroundColor);
+		canvas.end();
+	}
+
+	// Set the pixel arrays initial values
+	visitedPixels.setColor(255);
+	updatePixelArrays();
+
+	// Loop until the painting is finished
+	float averageBrushSize = max(smallerBrushSize, max(imgWidth, imgHeight) / 6.0f);
+	bool continuePainting = true;
+
+	while (continuePainting) {
 		// Obtain a new valid trace
+		ofxOilTrace trace;
 		bool traceNotFound = true;
 		unsigned int invalidTrajectoriesCounter = 0;
 		unsigned int invalidTracesCounter = 0;
@@ -70,15 +86,8 @@ void ofApp::update() {
 			if (averageBrushSize == smallerBrushSize
 					&& (invalidTrajectoriesCounter > maxInvalidTrajectoriesForSmallerSize
 							|| invalidTracesCounter > maxInvalidTracesForSmallerSize)) {
-				ofLogNotice() << "Total number of painted traces: " << nTraces;
 				ofLogNotice() << "Processing time = " << ofGetElapsedTimef() << " seconds";
 
-				// Save a final screenshot if necessary
-				if (saveFinalScreenshot) {
-					ofSaveScreen("screenshot-" + ofToString(ofGetFrameNum()) + ".png");
-				}
-
-				// Stop the simulation
 				traceNotFound = false;
 				continuePainting = false;
 			} else {
@@ -88,9 +97,6 @@ void ofApp::update() {
 								|| invalidTracesCounter > maxInvalidTraces)) {
 					averageBrushSize = max(smallerBrushSize,
 							min(averageBrushSize / brushSizeDecrement, averageBrushSize - 2));
-
-					ofLogNotice() << "Frame = " << ofGetFrameNum() << ", traces = " << nTraces
-							<< ", new average brush size = " << averageBrushSize << "";
 
 					// Reset some the counters
 					invalidTrajectoriesCounter = 0;
@@ -134,10 +140,7 @@ void ofApp::update() {
 					// Check if painting the trace will improve the painting
 					if (trace.improvesPainting(img)) {
 						// Test passed, the trace is good enough to be painted
-						obtainNewTrace = false;
 						traceNotFound = false;
-						traceStep = 0;
-						++nTraces;
 					} else {
 						// The trace is not good enough, try again in the next loop step
 						++invalidTracesCounter;
@@ -149,82 +152,24 @@ void ofApp::update() {
 			}
 		}
 
-		// Update the window title
+		// Paint the trace if we didn't finish the painting
 		if (continuePainting) {
-			ofSetWindowTitle("Oil painting simulation ( frame rate: " + ofToString(round(ofGetFrameRate())) + " )");
-		} else {
-			ofSetWindowTitle("Oil painting simulation ( finished )");
-		}
-	}
-}
+			// Paint the trace
+			canvas.begin();
+			trace.paint();
+			canvas.end();
 
-//--------------------------------------------------------------
-void ofApp::draw() {
-	if (continuePainting) {
-		// Paint the trace step by step or in one go
-		if (paintStepByStep) {
-			if (useCanvasBuffer) {
-				canvas.begin();
-				trace.paintStep(traceStep, canvasBuffer);
-				canvas.end();
-			} else {
-				canvas.begin();
-				trace.paintStep(traceStep);
-				canvas.end();
-			}
-
-			// Increment the trace step
-			++traceStep;
-
-			// Check if we finished painting the trace
-			if (traceStep == trace.getNSteps()) {
-				obtainNewTrace = true;
-			}
-		} else {
-			if (useCanvasBuffer) {
-				canvas.begin();
-				trace.paint(canvasBuffer);
-				canvas.end();
-			} else {
-				canvas.begin();
-				trace.paint();
-				canvas.end();
-			}
-
-			obtainNewTrace = true;
-		}
-
-		// Update the pixel arrays if we finished painting the trace
-		if (obtainNewTrace) {
+			// Update the pixel arrays
 			trace.setVisitedPixels(visitedPixels);
 			updatePixelArrays();
 		}
-	}
-
-	// Draw the result on the screen
-	canvas.draw(0, 0);
-
-	if (comparisonMode) {
-		img.draw(imgWidth, 0);
-	} else if (debugMode) {
-		ofImage visitedPixelsImg;
-		visitedPixelsImg.setFromPixels(visitedPixels);
-		visitedPixelsImg.draw(imgWidth, 0);
-
-		ofImage similarColorImg;
-		similarColorImg.setFromPixels(similarColorPixels);
-		similarColorImg.draw(2 * imgWidth, 0);
 	}
 }
 
 //--------------------------------------------------------------
 void ofApp::updatePixelArrays() {
 	// Update the painted pixels
-	if (useCanvasBuffer) {
-		canvasBuffer.readToPixels(paintedPixels);
-	} else {
-		canvas.readToPixels(paintedPixels);
-	}
+	canvas.readToPixels(paintedPixels);
 
 	// Update the similar color pixels and the bad painted pixels
 	const ofPixels& imgPixels = img.getPixels();
