@@ -49,21 +49,22 @@ float ofxOilSimulator::MAX_WELL_PAINTED_DESTRUCTION_FRACTION = 0.4; // 0.4 - 0.5
 ofxOilSimulator::ofxOilSimulator(bool _useCanvasBuffer, bool _verbose) :
 		useCanvasBuffer(_useCanvasBuffer), verbose(_verbose) {
 	nBadPaintedPixels = 0;
-	averageBrushSize = 0;
+	averageBrushSize = SMALLER_BRUSH_SIZE;
 	paintingIsFinised = true;
 	obtainNewTrace = false;
 	traceStep = 0;
 	nTraces = 0;
 }
 
-void ofxOilSimulator::setImagePixels(const ofPixels& newImgPixels, bool clearCanvas) {
-	// Set the new image to paint
-	img = ofImage(newImgPixels);
+void ofxOilSimulator::setImagePixels(const ofPixels& imagePixels, bool clearCanvas) {
+	// Set the image pixels
+	img = ofImage(imagePixels);
 	int imgWidth = img.getWidth();
 	int imgHeight = img.getHeight();
 
+	// Initialize the canvas and pixel containers if necessary
 	if (clearCanvas || imgWidth != canvas.getWidth() || imgHeight != canvas.getHeight()) {
-		// Initialize the canvas where we will paint the image
+		// Initialize the canvas where the image will be painted
 		canvas.allocate(imgWidth, imgHeight, GL_RGB, 2);
 		canvas.begin();
 		ofClear(BACKGROUND_COLOR);
@@ -78,13 +79,13 @@ void ofxOilSimulator::setImagePixels(const ofPixels& newImgPixels, bool clearCan
 		}
 
 		// Initialize all the pixel arrays
-		similarColorPixels.allocate(imgWidth, imgHeight, OF_PIXELS_GRAY);
 		visitedPixels.allocate(imgWidth, imgHeight, OF_PIXELS_GRAY);
+		similarColorPixels.allocate(imgWidth, imgHeight, OF_PIXELS_GRAY);
 		badPaintedPixels = vector<unsigned int>(imgWidth * imgHeight);
 		nBadPaintedPixels = 0;
 	}
 
-	// Initialize the rest of the sketch variables
+	// Initialize the rest of the simulator variables
 	averageBrushSize = max(SMALLER_BRUSH_SIZE, max(imgWidth, imgHeight) / 6.0f);
 	paintingIsFinised = false;
 	obtainNewTrace = true;
@@ -92,15 +93,17 @@ void ofxOilSimulator::setImagePixels(const ofPixels& newImgPixels, bool clearCan
 	nTraces = 0;
 }
 
-void ofxOilSimulator::setImage(const ofImage& newImg, bool clearCanvas) {
-	setImagePixels(newImg.getPixels(), clearCanvas);
+void ofxOilSimulator::setImage(const ofImage& image, bool clearCanvas) {
+	setImagePixels(image.getPixels(), clearCanvas);
 }
 
 void ofxOilSimulator::update(bool stepByStep) {
+	// Don't do anything if the painting is finished
 	if (paintingIsFinised) {
 		return;
 	}
 
+	// Check if a new trace should be obtained
 	if (obtainNewTrace) {
 		// Update the pixel arrays
 		updatePixelArrays();
@@ -109,8 +112,10 @@ void ofxOilSimulator::update(bool stepByStep) {
 		getNewTrace();
 	}
 
+	// Paint the current trace if the painting is not finished
 	if (!paintingIsFinised) {
 		if (stepByStep) {
+			// Paint the current trace step
 			paintTraceStep();
 
 			// Check if we finished painting the trace
@@ -118,6 +123,7 @@ void ofxOilSimulator::update(bool stepByStep) {
 				obtainNewTrace = true;
 			}
 		} else {
+			// Paint all the trace steps
 			paintTrace();
 			obtainNewTrace = true;
 		}
@@ -128,22 +134,20 @@ void ofxOilSimulator::updatePixelArrays() {
 	// Update the visited pixels array
 	updateVisitedPixels();
 
-	// Update the painted pixels
+	// Update the painted pixels array
 	if (useCanvasBuffer) {
 		canvasBuffer.readToPixels(paintedPixels);
 	} else {
 		canvas.readToPixels(paintedPixels);
 	}
 
-	// Update the similar color pixels and the bad painted pixels
+	// Update the similar color pixels and the bad painted pixels arrays
 	const ofPixels& imgPixels = img.getPixels();
 	unsigned int imgNumChannels = imgPixels.getNumChannels();
 	unsigned int canvasNumChannels = paintedPixels.getNumChannels();
 	nBadPaintedPixels = 0;
-	int imgWidth = img.getWidth();
-	int imgHeight = img.getHeight();
 
-	for (unsigned int pixel = 0, nPixels = imgWidth * imgHeight; pixel < nPixels; ++pixel) {
+	for (unsigned int pixel = 0, nPixels = img.getWidth() * img.getHeight(); pixel < nPixels; ++pixel) {
 		unsigned int imgPix = pixel * imgNumChannels;
 		unsigned int canvasPix = pixel * canvasNumChannels;
 
@@ -163,19 +167,21 @@ void ofxOilSimulator::updatePixelArrays() {
 }
 
 void ofxOilSimulator::updateVisitedPixels() {
+	// Check if we are at the beginning of a simulation
 	if (nTraces == 0) {
+		// Reset the visited pixels array
 		visitedPixels.setColor(255);
 	} else {
-		// Extract some useful information
+		// Update the visited pixels arrays with the trace bristle positions
+		const vector<unsigned char>& alphas = trace.getTrajectoryAphas();
+		const vector<vector<ofVec2f>>& bristlePositions = trace.getBristlePositions();
 		int width = visitedPixels.getWidth();
 		int height = visitedPixels.getHeight();
-		const vector<vector<ofVec2f>>& bPositions = trace.getBristlePositions();
-		const vector<unsigned char>& alphas = trace.getTrajectoryAphas();
 
 		for (unsigned int i = 0, nSteps = trace.getNSteps(); i < nSteps; ++i) {
 			// Fill the visited pixels array if alpha is high enough
 			if (alphas[i] >= ofxOilTrace::MIN_ALPHA) {
-				for (const ofVec2f& pos : bPositions[i]) {
+				for (const ofVec2f& pos : bristlePositions[i]) {
 					int x = pos.x;
 					int y = pos.y;
 
@@ -189,22 +195,23 @@ void ofxOilSimulator::updateVisitedPixels() {
 }
 
 void ofxOilSimulator::getNewTrace() {
+	// Loop until a new trace is found or the painting is finished
 	unsigned int invalidTrajectoriesCounter = 0;
 	unsigned int invalidTracesCounter = 0;
 	int imgWidth = img.getWidth();
 
 	while (true) {
-		// Check if we should stop the paint
+		// Check if we should stop the painting simulation
 		if (averageBrushSize == SMALLER_BRUSH_SIZE
 				&& (invalidTrajectoriesCounter > MAX_INVALID_TRAJECTORIES_FOR_SMALLER_SIZE
 						|| invalidTracesCounter > MAX_INVALID_TRACES_FOR_SMALLER_SIZE)) {
-
+			// Print some debug information if necessary
 			if (verbose) {
 				ofLogNotice() << "Total number of painted traces: " << nTraces;
 				ofLogNotice() << "Processing time = " << ofGetElapsedTimef() << " seconds";
 			}
 
-			// Stop the simulation
+			// Stop the painting
 			paintingIsFinised = true;
 			break;
 		} else {
@@ -216,6 +223,7 @@ void ofxOilSimulator::getNewTrace() {
 				averageBrushSize = max(SMALLER_BRUSH_SIZE,
 						min(averageBrushSize / BRUSH_SIZE_DECREMENT, averageBrushSize - 2));
 
+				// Print some debug information if necessary
 				if (verbose) {
 					ofLogNotice() << "Frame = " << ofGetFrameNum() << ", traces = " << nTraces
 							<< ", new average brush size = " << averageBrushSize << "";
@@ -255,12 +263,12 @@ void ofxOilSimulator::getNewTrace() {
 				// Set the trace brush size
 				trace.setBrushSize(brushSize);
 
-				// Calculate the trace bristle colors along the trajectory
+				// Calculate the trace average color and the bristle colors along the trajectory
 				trace.calculateAverageColor(img);
 				trace.calculateBristleColors(paintedPixels, BACKGROUND_COLOR);
 
 				// Check if painting the trace will improve the painting
-				if (improvesPainting()) {
+				if (traceImprovesPainting()) {
 					// Test passed, the trace is good enough to be painted
 					obtainNewTrace = false;
 					traceStep = 0;
@@ -280,12 +288,12 @@ void ofxOilSimulator::getNewTrace() {
 
 bool ofxOilSimulator::alreadyVisitedTrajectory() const {
 	// Extract some useful information
-	int width = visitedPixels.getWidth();
-	int height = visitedPixels.getHeight();
 	const vector<ofVec2f>& positions = trace.getTrajectoryPositions();
 	const vector<unsigned char>& alphas = trace.getTrajectoryAphas();
+	int width = visitedPixels.getWidth();
+	int height = visitedPixels.getHeight();
 
-	// Obtain some pixel statistics along the trajectory
+	// Check if the trace trajectory has been visited before
 	int insideCounter = 0;
 	int visitedCounter = 0;
 
@@ -312,10 +320,10 @@ bool ofxOilSimulator::alreadyVisitedTrajectory() const {
 
 bool ofxOilSimulator::validTrajectory() const {
 	// Extract some useful information
-	int width = img.getWidth();
-	int height = img.getHeight();
 	const vector<ofVec2f>& positions = trace.getTrajectoryPositions();
 	const vector<unsigned char>& alphas = trace.getTrajectoryAphas();
+	int width = img.getWidth();
+	int height = img.getHeight();
 
 	// Obtain some pixel statistics along the trajectory
 	int insideCounter = 0;
@@ -386,12 +394,12 @@ bool ofxOilSimulator::validTrajectory() const {
 	return insideCanvas && badPainted && smallColorChange;
 }
 
-bool ofxOilSimulator::improvesPainting() {
+bool ofxOilSimulator::traceImprovesPainting() const {
 	// Extract some useful information
 	const vector<unsigned char>& alphas = trace.getTrajectoryAphas();
-	const vector<vector<ofColor>>& bColors = trace.getBristleColors();
-	const vector<vector<ofColor>>& bImgColors = trace.getBristleImageColors();
-	const vector<vector<ofColor>>& bPaintedColors = trace.getBristlePaintedColors();
+	const vector<vector<ofColor>>& bristleImgColors = trace.getBristleImageColors();
+	const vector<vector<ofColor>>& bristlePaintedColors = trace.getBristlePaintedColors();
+	const vector<vector<ofColor>>& bristleColors = trace.getBristleColors();
 
 	// Obtain some trace statistics
 	int insideCounter = 0;
@@ -406,9 +414,9 @@ bool ofxOilSimulator::improvesPainting() {
 		// Check that the alpha value is high enough
 		if (alphas[i] >= ofxOilTrace::MIN_ALPHA) {
 			// Get the bristles image colors and painted colors for this step
-			const vector<ofColor>& bic = bImgColors[i];
-			const vector<ofColor>& bpc = bPaintedColors[i];
-			const vector<ofColor>& bc = bColors[i];
+			const vector<ofColor>& bic = bristleImgColors[i];
+			const vector<ofColor>& bpc = bristlePaintedColors[i];
+			const vector<ofColor>& bc = bristleColors[i];
 
 			// Make sure that the containers are not empty
 			if (bic.size() > 0) {
@@ -490,27 +498,17 @@ bool ofxOilSimulator::improvesPainting() {
 }
 
 void ofxOilSimulator::paintTrace() {
-	if (useCanvasBuffer) {
-		canvas.begin();
-		trace.paint(canvasBuffer);
-		canvas.end();
-	} else {
-		canvas.begin();
-		trace.paint();
-		canvas.end();
-	}
+	// Pain the trace in the canvas and the canvas buffer if necessary
+	canvas.begin();
+	useCanvasBuffer ? trace.paint(canvasBuffer) : trace.paint();
+	canvas.end();
 }
 
 void ofxOilSimulator::paintTraceStep() {
-	if (useCanvasBuffer) {
-		canvas.begin();
-		trace.paintStep(traceStep, canvasBuffer);
-		canvas.end();
-	} else {
-		canvas.begin();
-		trace.paintStep(traceStep);
-		canvas.end();
-	}
+	// Pain the trace step in the canvas and the canvas buffer if necessary
+	canvas.begin();
+	useCanvasBuffer ? trace.paintStep(traceStep, canvasBuffer) : trace.paintStep(traceStep);
+	canvas.end();
 
 	// Increment the trace step
 	++traceStep;
@@ -531,9 +529,9 @@ void ofxOilSimulator::drawVisitedPixels(float x, float y) const {
 }
 
 void ofxOilSimulator::drawSimilarColorPixels(float x, float y) const {
-	ofImage similarColorImg;
-	similarColorImg.setFromPixels(similarColorPixels);
-	similarColorImg.draw(x, y);
+	ofImage similarColorPixelsImg;
+	similarColorPixelsImg.setFromPixels(similarColorPixels);
+	similarColorPixelsImg.draw(x, y);
 }
 
 bool ofxOilSimulator::isFinished() const {
