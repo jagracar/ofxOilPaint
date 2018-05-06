@@ -22,12 +22,12 @@ public:
 	static unsigned char MIN_ALPHA;
 
 	/**
-	 * @brief The brightness relative change range between the bristles
+	 * @brief The brightness relative change range between the bristles colors
 	 */
 	static float BRIGHTNESS_RELATIVE_CHANGE;
 
 	/**
-	 * @brief The typical step when the color mixing starts
+	 * @brief The typical trajectory step when the color mixing starts
 	 */
 	static unsigned int TYPICAL_MIX_STARTING_STEP;
 
@@ -35,68 +35,6 @@ public:
 	 * @brief The color mixing strength
 	 */
 	static float MIX_STRENGTH;
-
-	/**
-	 * @brief The maximum color difference between the painted image and the already painted color to consider it well
-	 * painted
-	 */
-	static array<int, 3> MAX_COLOR_DIFFERENCE;
-
-	/**
-	 * @brief The maximum allowed fraction of pixels in the trace trajectory that have been visited before
-	 */
-	static float MAX_VISITS_FRACTION_IN_TRAJECTORY;
-
-	/**
-	 * @brief The minimum fraction of pixels in the trace trajectory that should fall inside the canvas
-	 */
-	static float MIN_INSIDE_FRACTION_IN_TRAJECTORY;
-
-	/**
-	 * @brief The maximum allowed fraction of pixels in the trace trajectory with colors similar to the painted image
-	 */
-	static float MAX_SIMILAR_COLOR_FRACTION_IN_TRAJECTORY;
-
-	/**
-	 * @brief The maximum allowed value of the colors standard deviation along the trace trajectory
-	 */
-	static float MAX_COLOR_STDEV_IN_TRAJECTORY;
-
-	/**
-	 * @brief The minimum fraction of pixels in the trace that should fall inside the canvas
-	 */
-	static float MIN_INSIDE_FRACTION;
-
-	/**
-	 * @brief The maximum fraction of pixels in the trace with colors similar to the painted image
-	 */
-	static float MAX_SIMILAR_COLOR_FRACTION;
-
-	/**
-	 * @brief The maximum fraction of pixels in the trace that has been painted already
-	 */
-	static float MAX_PAINTED_FRACTION;
-
-	/**
-	 * @brief The minimum color improvement factor of the already painted pixels required to paint the trace on the canvas
-	 */
-	static float MIN_COLOR_IMPROVEMENT_FACTOR;
-
-	/**
-	 * @brief The minimum improvement fraction in the number of well painted pixels to consider to paint the trace even if
-	 * there is not a significant color improvement
-	 */
-	static float BIG_WELL_PAINTED_IMPROVEMENT_FRACTION;
-
-	/**
-	 * @brief The minimum reduction fraction in the number of bad painted pixels required to paint the trace on the canvas
-	 */
-	static float MIN_BAD_PAINTED_REDUCTION_FRACTION;
-
-	/**
-	 * @brief The maximum allowed fraction of pixels in the trace that were previously well painted and will be now bad painted
-	 */
-	static float MAX_WELL_PAINTED_DESTRUCTION_FRACTION;
 
 	/**
 	 * @brief Constructor
@@ -114,26 +52,6 @@ public:
 	 * @param _alphas the trace alpha values at each trajectory step
 	 */
 	ofxOilTrace(const vector<ofVec2f>& _positions, const vector<unsigned char>& _alphas);
-
-	/**
-	 * @brief Checks if the trace trajectory falls in a region that has been visited before.
-	 *
-	 * @param visitedPixels the pixels object that indicates if a pixel has been visited or not
-	 */
-	bool alreadyVisitedTrajectory(const ofPixels& visitedPixels) const;
-
-	/**
-	 * @brief Checks if the trace trajectory is valid.
-	 *
-	 * To be valid it should fall on a region that was not painted correctly before, it should fall most of the
-	 * time inside the canvas, and the image color changes should be small.
-	 *
-	 * @param img the painted image
-	 * @param paintedPixels the painted pixels
-	 * @param backgroundColor the background color
-	 * @return true if the trace has a valid trajectory
-	 */
-	bool hasValidTrajectory(const ofImage& img, const ofPixels& paintedPixels, const ofColor& backgroundColor) const;
 
 	/**
 	 * @brief Sets the trace brush size
@@ -163,17 +81,6 @@ public:
 	 * @param backgroundColor the background color
 	 */
 	void calculateBristleColors(const ofPixels& paintedPixels, const ofColor& backgroundColor);
-
-	/**
-	 * @brief Checks if drawing the trace will improve the overall painting
-	 *
-	 * Note that the calculateBristleColors method should have been run before.
-	 *
-	 * @param img the painted image
-	 * @return false if the region covered by the trace was already painted with similar colors, most of the trace is
-	 *         outside the canvas, or drawing the trace will not improve considerably the painting
-	 */
-	bool improvesPainting(const ofImage& img);
 
 	/**
 	 * @brief Paints the trace
@@ -213,25 +120,6 @@ public:
 	void paintStep(unsigned int step, ofFbo& canvasBuffer);
 
 	/**
-	 * @brief Paints the trace
-	 *
-	 * Note that the calculateBristleColors method should have been run before.
-	 *
-	 * @param visitedPixels the pixels object that indicates if a pixel has been visited or not
-	 */
-	void setVisitedPixels(ofPixels& visitedPixels);
-
-	/**
-	 * @brief Paints a given step in the trace trajectory
-	 *
-	 * Note that the calculateBristleColors method should have been run before.
-	 *
-	 * @param step the trace trajectory step to paint
-	 * @param visitedPixels the pixels object that indicates if a pixel has been visited or not
-	 */
-	void setVisitedPixels(unsigned int step, ofPixels& visitedPixels);
-
-	/**
 	 * @brief Returns the number of steps in the trace trajectory
 	 *
 	 * @return the total number of steps in the trace trajectory
@@ -253,6 +141,20 @@ public:
 	const vector<unsigned char>& getTrajectoryAphas() const;
 
 	/**
+	 * @brief Returns the trace average color
+	 *
+	 * @return the trace average color
+	 */
+	const ofColor& getAverageColor() const;
+
+	/**
+	 * @brief Returns the number of bristles in the brush
+	 *
+	 * @return the total number of bristles in the brush
+	 */
+	unsigned int getNBristles() const;
+
+	/**
 	 * @brief Returns the brush bristle positions along the trace trajectory
 	 *
 	 * @return the brush bristle positions along the trace trajectory
@@ -260,11 +162,25 @@ public:
 	const vector<vector<ofVec2f>>& getBristlePositions() const;
 
 	/**
-	 * @brief Returns the trace average color
+	 * @brief Returns the brush bristle image colors along the trace trajectory
 	 *
-	 * @return the trace average color
+	 * @return the brush bristle image colors along the trace trajectory
 	 */
-	const ofColor& getAverageColor() const;
+	const vector<vector<ofColor>>& getBristleImageColors() const;
+
+	/**
+	 * @brief Returns the brush bristle painted colors along the trace trajectory
+	 *
+	 * @return the brush bristle painted colors along the trace trajectory
+	 */
+	const vector<vector<ofColor>>& getBristlePaintedColors() const;
+
+	/**
+	 * @brief Returns the brush bristle colors along the trace trajectory
+	 *
+	 * @return the brush bristle colors along the trace trajectory
+	 */
+	const vector<vector<ofColor>>& getBristleColors() const;
 
 protected:
 
@@ -278,15 +194,15 @@ protected:
 	 *
 	 * @param img the painted image
 	 */
-	void calculateImgColors(const ofImage& img);
+	void calculateBristleImageColors(const ofImage& img);
 
 	/**
 	 * @brief Calculates the painted colors at the bristles positions
 	 *
 	 * @param paintedPixels the painted pixels
-	 * @param backgroundColor the background color
+	 * @param backgroundColor the canvas background color
 	 */
-	void calculatePaintedColors(const ofPixels& paintedPixels, const ofColor& backgroundColor);
+	void calculateBristlePaintedColors(const ofPixels& paintedPixels, const ofColor& backgroundColor);
 
 	/**
 	 * @brief The trace trajectory positions
@@ -294,7 +210,7 @@ protected:
 	vector<ofVec2f> positions;
 
 	/**
-	 * @brief The colors alpha values along the trajectory
+	 * @brief The bristle colors alpha values at each trajectory position
 	 */
 	vector<unsigned char> alphas;
 

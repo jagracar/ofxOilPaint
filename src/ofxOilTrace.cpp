@@ -12,30 +12,6 @@ unsigned int ofxOilTrace::TYPICAL_MIX_STARTING_STEP = 5;
 
 float ofxOilTrace::MIX_STRENGTH = 0.012;
 
-array<int, 3> ofxOilTrace::MAX_COLOR_DIFFERENCE = { 40, 40, 40 };
-
-float ofxOilTrace::MAX_VISITS_FRACTION_IN_TRAJECTORY = 0.35;
-
-float ofxOilTrace::MIN_INSIDE_FRACTION_IN_TRAJECTORY = 0.4;
-
-float ofxOilTrace::MAX_SIMILAR_COLOR_FRACTION_IN_TRAJECTORY = 0.6;
-
-float ofxOilTrace::MAX_COLOR_STDEV_IN_TRAJECTORY = 45;
-
-float ofxOilTrace::MIN_INSIDE_FRACTION = 0.7;
-
-float ofxOilTrace::MAX_SIMILAR_COLOR_FRACTION = 0.8; // 0.8 - 0.85 - 0.5
-
-float ofxOilTrace::MAX_PAINTED_FRACTION = 0.65;
-
-float ofxOilTrace::MIN_COLOR_IMPROVEMENT_FACTOR = 0.6;
-
-float ofxOilTrace::BIG_WELL_PAINTED_IMPROVEMENT_FRACTION = 0.3; // 0.3 - 0.35 - 0.4
-
-float ofxOilTrace::MIN_BAD_PAINTED_REDUCTION_FRACTION = 0.45; // 0.45 - 0.3 - 0.45
-
-float ofxOilTrace::MAX_WELL_PAINTED_DESTRUCTION_FRACTION = 0.4; // 0.4 - 0.55 - 0.4
-
 ofxOilTrace::ofxOilTrace(const ofVec2f& startingPosition, unsigned int nSteps, float speed) {
 	// Check that the input makes sense
 	if (nSteps == 0) {
@@ -55,7 +31,7 @@ ofxOilTrace::ofxOilTrace(const ofVec2f& startingPosition, unsigned int nSteps, f
 		alphas.push_back(255 - alphaDecrement * i);
 	}
 
-	// Set the average color
+	// Set the average color as totally transparent
 	averageColor.set(0, 0);
 }
 
@@ -70,111 +46,6 @@ ofxOilTrace::ofxOilTrace(const vector<ofVec2f>& _positions, const vector<unsigne
 	positions = _positions;
 	alphas = _alphas;
 	averageColor.set(0, 0);
-}
-
-bool ofxOilTrace::alreadyVisitedTrajectory(const ofPixels& visitedPixels) const {
-	// Extract some useful information
-	int width = visitedPixels.getWidth();
-	int height = visitedPixels.getHeight();
-
-	// Obtain some pixel statistics along the trajectory
-	int insideCounter = 0;
-	int visitedCounter = 0;
-
-	for (unsigned int i = ofxOilBrush::POSITIONS_FOR_AVERAGE, nSteps = getNSteps(); i < nSteps; ++i) {
-		// Check that the alpha value is high enough
-		if (alphas[i] >= MIN_ALPHA) {
-			// Check that the position is inside the image
-			const ofVec2f& pos = positions[i];
-			int x = pos.x;
-			int y = pos.y;
-
-			if (x >= 0 && x < width && y >= 0 && y < height) {
-				++insideCounter;
-
-				if (visitedPixels.getColor(x, y) == 0) {
-					++visitedCounter;
-				}
-			}
-		}
-	}
-
-	return visitedCounter > MAX_VISITS_FRACTION_IN_TRAJECTORY * insideCounter;
-}
-
-bool ofxOilTrace::hasValidTrajectory(const ofImage& img, const ofPixels& paintedPixels,
-		const ofColor& backgroundColor) const {
-	// Extract some useful information
-	int width = img.getWidth();
-	int height = img.getHeight();
-
-	// Obtain some pixel statistics along the trajectory
-	int insideCounter = 0;
-	int outsideCounter = 0;
-	int similarColorCounter = 0;
-	float imgRedSum = 0;
-	float imgRedSqSum = 0;
-	float imgGreenSum = 0;
-	float imgGreenSqSum = 0;
-	float imgBlueSum = 0;
-	float imgBlueSqSum = 0;
-
-	for (unsigned int i = ofxOilBrush::POSITIONS_FOR_AVERAGE, nSteps = getNSteps(); i < nSteps; ++i) {
-		// Check that the alpha value is high enough
-		if (alphas[i] >= MIN_ALPHA) {
-			// Check that the position is inside the image
-			const ofVec2f& pos = positions[i];
-			int x = pos.x;
-			int y = pos.y;
-
-			if (x >= 0 && x < width && y >= 0 && y < height) {
-				++insideCounter;
-
-				// Get the image color and the painted color at the trajectory position
-				const ofColor& imgColor = img.getColor(x, y);
-				const ofColor& paintedColor = paintedPixels.getColor(x, y);
-
-				// Check if the two colors are similar
-				if (paintedColor != backgroundColor && abs(imgColor.r - paintedColor.r) < MAX_COLOR_DIFFERENCE[0]
-						&& abs(imgColor.g - paintedColor.g) < MAX_COLOR_DIFFERENCE[1]
-						&& abs(imgColor.b - paintedColor.b) < MAX_COLOR_DIFFERENCE[2]) {
-					++similarColorCounter;
-				}
-
-				// Extract the pixel color properties
-				int imgRed = imgColor.r;
-				int imgGreen = imgColor.g;
-				int imgBlue = imgColor.b;
-				imgRedSum += imgRed;
-				imgRedSqSum += imgRed * imgRed;
-				imgGreenSum += imgGreen;
-				imgGreenSqSum += imgGreen * imgGreen;
-				imgBlueSum += imgBlue;
-				imgBlueSqSum += imgBlue * imgBlue;
-			} else {
-				++outsideCounter;
-			}
-		}
-	}
-
-	// Obtain the image colors standard deviation along the trajectory
-	float imgRedStDevSq = 0;
-	float imgGreenStDevSq = 0;
-	float imgBlueStDevSq = 0;
-
-	if (insideCounter > 1) {
-		imgRedStDevSq = (imgRedSqSum - imgRedSum * imgRedSum / insideCounter) / (insideCounter - 1);
-		imgGreenStDevSq = (imgGreenSqSum - imgGreenSum * imgGreenSum / insideCounter) / (insideCounter - 1);
-		imgBlueStDevSq = (imgBlueSqSum - imgBlueSum * imgBlueSum / insideCounter) / (insideCounter - 1);
-	}
-
-	// Check if we have a valid trajectory
-	bool insideCanvas = insideCounter >= MIN_INSIDE_FRACTION_IN_TRAJECTORY * (insideCounter + outsideCounter);
-	bool badPainted = similarColorCounter <= MAX_SIMILAR_COLOR_FRACTION_IN_TRAJECTORY * insideCounter;
-	float maxSqDevSq = pow(MAX_COLOR_STDEV_IN_TRAJECTORY, 2);
-	bool smallColorChange = imgRedStDevSq < maxSqDevSq && imgGreenStDevSq < maxSqDevSq && imgBlueStDevSq < maxSqDevSq;
-
-	return insideCanvas && badPainted && smallColorChange;
 }
 
 void ofxOilTrace::setBrushSize(float brushSize) {
@@ -207,7 +78,7 @@ void ofxOilTrace::calculateBristlePositions() {
 	brush.resetPosition(positions[0]);
 }
 
-void ofxOilTrace::calculateImgColors(const ofImage& img) {
+void ofxOilTrace::calculateBristleImageColors(const ofImage& img) {
 	// Extract some useful information
 	int width = img.getWidth();
 	int height = img.getHeight();
@@ -238,7 +109,7 @@ void ofxOilTrace::calculateImgColors(const ofImage& img) {
 	}
 }
 
-void ofxOilTrace::calculatePaintedColors(const ofPixels& paintedPixels, const ofColor& backgroundColor) {
+void ofxOilTrace::calculateBristlePaintedColors(const ofPixels& paintedPixels, const ofColor& backgroundColor) {
 	// Extract some useful information
 	int width = paintedPixels.getWidth();
 	int height = paintedPixels.getHeight();
@@ -285,7 +156,7 @@ void ofxOilTrace::setAverageColor(const ofColor& color) {
 void ofxOilTrace::calculateAverageColor(const ofImage& img) {
 	// Calculate the bristle image colors if necessary
 	if (bImgColors.size() == 0) {
-		calculateImgColors(img);
+		calculateBristleImageColors(img);
 	}
 
 	// Calculate the trace average color
@@ -316,13 +187,13 @@ void ofxOilTrace::calculateAverageColor(const ofImage& img) {
 }
 
 void ofxOilTrace::calculateBristleColors(const ofPixels& paintedPixels, const ofColor& backgroundColor) {
-	// Extract some useful information
+	// Get some useful information
 	unsigned int nSteps = getNSteps();
-	unsigned int nBristles = brush.getNBristles();
+	unsigned int nBristles = getNBristles();
 
 	// Calculate the bristle painted colors if necessary
 	if (bPaintedColors.size() == 0) {
-		calculatePaintedColors(paintedPixels, backgroundColor);
+		calculateBristlePaintedColors(paintedPixels, backgroundColor);
 	}
 
 	// Calculate the starting colors for each bristle
@@ -382,113 +253,6 @@ void ofxOilTrace::calculateBristleColors(const ofPixels& paintedPixels, const of
 			}
 		}
 	}
-}
-
-bool ofxOilTrace::improvesPainting(const ofImage& img) {
-	// Check that the bristle colors have been calculated before running this method
-	if (bColors.size() == 0) {
-		throw logic_error("Please, run calculateBristleColors method before improvesPainting.");
-	}
-
-	// Calculate the bristle image colors if necessary
-	if (bImgColors.size() == 0) {
-		calculateImgColors(img);
-	}
-
-	// Obtain some trace statistics
-	int insideCounter = 0;
-	int outsideCounter = 0;
-	int paintedCounter = 0;
-	int similarColorCounter = 0;
-	int wellPaintedCounter = 0;
-	int destroyedSimilarColorCounter = 0;
-	int colorImprovement = 0;
-
-	for (unsigned int i = 0, nSteps = getNSteps(); i < nSteps; ++i) {
-		// Check that the alpha value is high enough
-		if (alphas[i] >= MIN_ALPHA) {
-			// Get the bristles image colors and painted colors for this step
-			const vector<ofColor>& bic = bImgColors[i];
-			const vector<ofColor>& bpc = bPaintedColors[i];
-			const vector<ofColor>& bc = bColors[i];
-
-			// Make sure that the containers are not empty
-			if (bic.size() > 0) {
-				for (unsigned int bristle = 0, nBristles = brush.getNBristles(); bristle < nBristles; ++bristle) {
-					// Get the image color and the painted color at the bristle position
-					const ofColor& imgColor = bic[bristle];
-					const ofColor& paintedColor = bpc[bristle];
-					const ofColor& bristleColor = bc[bristle];
-
-					// Check that the bristle is inside the image
-					if (imgColor.a != 0) {
-						++insideCounter;
-
-						// Count the number of painted pixels
-						bool paintedPixel = paintedColor.a != 0;
-
-						if (paintedPixel) {
-							++paintedCounter;
-						}
-
-						// Count the number of painted pixels whose color is similar to the image color
-						int redPaintedDiff = abs(imgColor.r - paintedColor.r);
-						int greenPaintedDiff = abs(imgColor.g - paintedColor.g);
-						int bluePaintedDiff = abs(imgColor.b - paintedColor.b);
-						bool similarColorPixel = paintedPixel && redPaintedDiff < MAX_COLOR_DIFFERENCE[0]
-								&& greenPaintedDiff < MAX_COLOR_DIFFERENCE[1]
-								&& bluePaintedDiff < MAX_COLOR_DIFFERENCE[2];
-
-						if (similarColorPixel) {
-							++similarColorCounter;
-						}
-
-						// Count the number of pixels that will be well painted
-						int redAverageDiff = abs(imgColor.r - bristleColor.r);
-						int greenAverageDiff = abs(imgColor.g - bristleColor.g);
-						int blueAverageDiff = abs(imgColor.b - bristleColor.b);
-						bool wellPaintedPixel = redAverageDiff < MAX_COLOR_DIFFERENCE[0]
-								&& greenAverageDiff < MAX_COLOR_DIFFERENCE[1]
-								&& blueAverageDiff < MAX_COLOR_DIFFERENCE[2];
-
-						if (wellPaintedPixel) {
-							++wellPaintedCounter;
-						}
-
-						// Count the number of pixels that will not be well painted anymore
-						if (similarColorPixel && !wellPaintedPixel) {
-							++destroyedSimilarColorCounter;
-						}
-
-						// Calculate the color improvement
-						if (paintedPixel) {
-							colorImprovement += redPaintedDiff - redAverageDiff + greenPaintedDiff - greenAverageDiff
-									+ bluePaintedDiff - blueAverageDiff;
-						}
-					} else {
-						++outsideCounter;
-					}
-				}
-			}
-		}
-	}
-
-	int wellPaintedImprovement = wellPaintedCounter - similarColorCounter;
-	int previouslyBadPainted = insideCounter - similarColorCounter;
-	float averageMaxColorDiff = (MAX_COLOR_DIFFERENCE[0] + MAX_COLOR_DIFFERENCE[1] + MAX_COLOR_DIFFERENCE[2]) / 3.0;
-
-	bool outsideCanvas = insideCounter < MIN_INSIDE_FRACTION * (insideCounter + outsideCounter);
-	bool alreadyWellPainted = similarColorCounter > MAX_SIMILAR_COLOR_FRACTION * insideCounter;
-	bool alreadyPainted = paintedCounter >= MAX_PAINTED_FRACTION * insideCounter;
-	bool colorImproves = colorImprovement >= MIN_COLOR_IMPROVEMENT_FACTOR * averageMaxColorDiff * paintedCounter;
-	bool bigWellPaintedImprovement = wellPaintedImprovement >= BIG_WELL_PAINTED_IMPROVEMENT_FRACTION * insideCounter;
-	bool reducedBadPainted = wellPaintedImprovement >= MIN_BAD_PAINTED_REDUCTION_FRACTION * previouslyBadPainted;
-	bool lowWellPaintedDestruction = destroyedSimilarColorCounter
-			<= MAX_WELL_PAINTED_DESTRUCTION_FRACTION * wellPaintedImprovement;
-	bool improves = (colorImproves || bigWellPaintedImprovement) && reducedBadPainted && lowWellPaintedDestruction;
-
-	// Check if the trace will improve the painting
-	return (outsideCanvas || alreadyWellPainted || (alreadyPainted && !improves)) ? false : true;
 }
 
 void ofxOilTrace::paint() {
@@ -583,54 +347,6 @@ void ofxOilTrace::paintStep(unsigned int step, ofFbo& canvasBuffer) {
 	}
 }
 
-void ofxOilTrace::setVisitedPixels(ofPixels& visitedPixels) {
-	// Extract some useful information
-	int width = visitedPixels.getWidth();
-	int height = visitedPixels.getHeight();
-
-	// Calculate the bristle positions if necessary
-	if (bPositions.size() == 0) {
-		calculateBristlePositions();
-	}
-
-	for (unsigned int i = 0, nSteps = getNSteps(); i < nSteps; ++i) {
-		// Fill the visited pixels array if alpha is high enough
-		if (alphas[i] >= MIN_ALPHA) {
-			for (const ofVec2f& pos : bPositions[i]) {
-				int x = pos.x;
-				int y = pos.y;
-
-				if (x >= 0 && x < width && y >= 0 && y < height) {
-					visitedPixels.setColor(x, y, ofColor(0));
-				}
-			}
-		}
-	}
-}
-
-void ofxOilTrace::setVisitedPixels(unsigned int step, ofPixels& visitedPixels) {
-	// Extract some useful information
-	int width = visitedPixels.getWidth();
-	int height = visitedPixels.getHeight();
-
-	// Calculate the bristle positions if necessary
-	if (bPositions.size() == 0) {
-		calculateBristlePositions();
-	}
-
-	// Fill the visited pixels array if alpha is high enough
-	if (alphas[step] >= MIN_ALPHA) {
-		for (const ofVec2f& pos : bPositions[step]) {
-			int x = pos.x;
-			int y = pos.y;
-
-			if (x >= 0 && x < width && y >= 0 && y < height) {
-				visitedPixels.setColor(x, y, ofColor(0));
-			}
-		}
-	}
-}
-
 unsigned int ofxOilTrace::getNSteps() const {
 	return positions.size();
 }
@@ -643,10 +359,26 @@ const vector<unsigned char>& ofxOilTrace::getTrajectoryAphas() const {
 	return alphas;
 }
 
+const ofColor& ofxOilTrace::getAverageColor() const {
+	return averageColor;
+}
+
+unsigned int ofxOilTrace::getNBristles() const {
+	return brush.getNBristles();
+}
+
 const vector<vector<ofVec2f>>& ofxOilTrace::getBristlePositions() const {
 	return bPositions;
 }
 
-const ofColor& ofxOilTrace::getAverageColor() const {
-	return averageColor;
+const vector<vector<ofColor>>& ofxOilTrace::getBristleImageColors() const {
+	return bImgColors;
+}
+
+const vector<vector<ofColor>>& ofxOilTrace::getBristlePaintedColors() const {
+	return bPaintedColors;
+}
+
+const vector<vector<ofColor>>& ofxOilTrace::getBristleColors() const {
+	return bColors;
 }
