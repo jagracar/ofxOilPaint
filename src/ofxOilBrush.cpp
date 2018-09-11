@@ -14,7 +14,7 @@ float ofxOilBrush::NOISE_SPEED_FACTOR = 0.04;
 
 unsigned int ofxOilBrush::POSITIONS_FOR_AVERAGE = 4;
 
-ofxOilBrush::ofxOilBrush(const ofVec2f& _position, float _size) :
+ofxOilBrush::ofxOilBrush(const glm::vec2& _position, float _size) :
 		position(_position), size(_size) {
 	// Calculate some of the bristles properties
 	bristlesLength = min(size, MAX_BRISTLE_LENGTH);
@@ -24,34 +24,35 @@ ofxOilBrush::ofxOilBrush(const ofVec2f& _position, float _size) :
 
 	// Initialize the bristles offsets and positions containers with default values
 	unsigned int nBristles = floor(size * ofRandom(1.6, 1.9));
-	bOffsets = vector<ofVec2f>(nBristles);
-	bPositions = vector<ofVec2f>(nBristles);
+	bOffsets = vector<glm::vec2>(nBristles);
+	bPositions = vector<glm::vec2>(nBristles);
 
 	// Randomize the bristle offset positions
-	for (ofVec2f& offset : bOffsets) {
-		offset.set(size * ofRandom(-0.5, 0.5), BRISTLE_VERTICAL_NOISE * ofRandom(-0.5, 0.5));
+	for (glm::vec2& offset : bOffsets) {
+		offset.x = size * ofRandom(-0.5, 0.5);
+		offset.y = BRISTLE_VERTICAL_NOISE * ofRandom(-0.5, 0.5);
 	}
 
 	// Initialize the variables used to calculate the brush average position
-	averagePosition.set(position);
+	averagePosition = position;
 	positionsHistory.push_back(position);
 	updatesCounter = 0;
 }
 
-void ofxOilBrush::resetPosition(const ofVec2f& newPosition) {
+void ofxOilBrush::resetPosition(const glm::vec2& newPosition) {
 	// Reset the brush position
-	position.set(newPosition);
+	position = newPosition;
 
 	// Reset the variables used to calculate the brush average position
-	averagePosition.set(position);
+	averagePosition = position;
 	positionsHistory.clear();
 	positionsHistory.push_back(position);
 	updatesCounter = 0;
 }
 
-void ofxOilBrush::updatePosition(const ofVec2f& newPosition, bool updateBristlesElements) {
+void ofxOilBrush::updatePosition(const glm::vec2& newPosition, bool updateBristlesElements) {
 	// Update the brush position
-	position.set(newPosition);
+	position = newPosition;
 
 	// Increment the updates counter
 	updatesCounter++;
@@ -60,15 +61,16 @@ void ofxOilBrush::updatePosition(const ofVec2f& newPosition, bool updateBristles
 	if (positionsHistory.size() < POSITIONS_FOR_AVERAGE) {
 		positionsHistory.push_back(position);
 	} else {
-		positionsHistory[updatesCounter % POSITIONS_FOR_AVERAGE].set(position);
+		positionsHistory[updatesCounter % POSITIONS_FOR_AVERAGE] = position;
 	}
 
 	// Update the average position
-	ofVec2f prevAveragePosition = averagePosition;
-	averagePosition.set(0, 0);
+	glm::vec2 prevAveragePosition = averagePosition;
+	averagePosition.x = 0;
+	averagePosition.y = 0;
 	int counter = 0;
 
-	for (const ofVec2f& pos : positionsHistory) {
+	for (const glm::vec2& pos : positionsHistory) {
 		averagePosition += pos;
 		++counter;
 	}
@@ -89,19 +91,20 @@ void ofxOilBrush::updatePosition(const ofVec2f& newPosition, bool updateBristles
 
 		for (unsigned int i = 0; i < nBristles; ++i) {
 			// Add some horizontal noise to the offset to make it look more realistic
-			const ofVec2f& offset = bOffsets[i];
+			const glm::vec2& offset = bOffsets[i];
 			float x = offset.x + bristlesHorizontalNoise * (ofNoise(noisePos + 0.1 * i) - 0.5);
 			float y = offset.y;
 
 			// Rotate the offset and add it to the brush central position
-			bPositions[i].set(position.x + (x * cosAng - y * sinAng), position.y + (x * sinAng + y * cosAng));
+			bPositions[i].x = position.x + (x * cosAng - y * sinAng);
+			bPositions[i].y = position.y + (x * sinAng + y * cosAng);
 		}
 
 		// Update the bristles elements to their new positions if necessary
 		if (updateBristlesElements) {
 			// Check if the bristles container should be initialized
 			if (bristles.size() == 0) {
-				bristles = vector<ofxOilBristle>(nBristles, ofxOilBristle(ofVec2f(), bristlesLength));
+				bristles = vector<ofxOilBristle>(nBristles, ofxOilBristle(glm::vec2(), bristlesLength));
 			}
 
 			if (positionsHistory.size() == POSITIONS_FOR_AVERAGE - 1) {
@@ -150,6 +153,6 @@ unsigned int ofxOilBrush::getNBristles() const {
 	return bOffsets.size();
 }
 
-const vector<ofVec2f> ofxOilBrush::getBristlesPositions() const {
-	return positionsHistory.size() == POSITIONS_FOR_AVERAGE ? bPositions : vector<ofVec2f>();
+const vector<glm::vec2> ofxOilBrush::getBristlesPositions() const {
+	return positionsHistory.size() == POSITIONS_FOR_AVERAGE ? bPositions : vector<glm::vec2>();
 }

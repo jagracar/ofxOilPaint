@@ -16,21 +16,21 @@ public:
 	 * @param position the bristle position
 	 * @param length the bristle total length
 	 */
-	ofxOilBristle(const ofVec2f& position = ofVec2f(), float length = 10);
+	ofxOilBristle(const glm::vec2& position = glm::vec2(), float length = 10);
 
 	/**
 	 * @brief Updates the bristle position
 	 *
 	 * @param newPosition the new bristle position
 	 */
-	void updatePosition(const ofVec2f& newPosition);
+	void updatePosition(const glm::vec2& newPosition);
 
 	/**
 	 * @brief Sets the bristle elements positions
 	 *
 	 * @param newPosition the new bristle elements position
 	 */
-	void setElementsPositions(const ofVec2f& newPosition);
+	void setElementsPositions(const glm::vec2& newPosition);
 
 	/**
 	 * @brief Sets the bristle elements lengths
@@ -59,7 +59,7 @@ protected:
 	/**
 	 * @brief The bristle elements positions
 	 */
-	vector<ofVec2f> positions;
+	vector<glm::vec2> positions;
 
 	/**
 	 * @brief The bristle elements lengths

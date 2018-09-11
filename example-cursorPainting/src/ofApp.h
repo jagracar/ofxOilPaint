@@ -27,6 +27,6 @@ public:
 	vector<ofColor> currentBristleColors;
 	float alphaValue;
 	ofPolyline cursorPath;
-	ofVec2f lastAddedPoint;
+	glm::vec2 lastAddedPoint;
 	float nextPathLength;
 };

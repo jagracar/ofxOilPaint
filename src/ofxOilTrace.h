@@ -43,7 +43,7 @@ public:
 	 * @param nSteps the total number of steps in the trace trajectory
 	 * @param speed the trace moving speed (pixels/step)
 	 */
-	ofxOilTrace(const ofVec2f& startingPosition = ofVec2f(), unsigned int nSteps = 20, float speed = 2);
+	ofxOilTrace(const glm::vec2& startingPosition = glm::vec2(), unsigned int nSteps = 20, float speed = 2);
 
 	/**
 	 * @brief Constructor
@@ -51,7 +51,7 @@ public:
 	 * @param _positions the trace trajectory positions
 	 * @param _alphas the trace alpha values at each trajectory step
 	 */
-	ofxOilTrace(const vector<ofVec2f>& _positions, const vector<unsigned char>& _alphas);
+	ofxOilTrace(const vector<glm::vec2>& _positions, const vector<unsigned char>& _alphas);
 
 	/**
 	 * @brief Sets the trace brush size
@@ -131,7 +131,7 @@ public:
 	 *
 	 * @return the trace trajectory positions
 	 */
-	const vector<ofVec2f>& getTrajectoryPositions() const;
+	const vector<glm::vec2>& getTrajectoryPositions() const;
 
 	/**
 	 * @brief Returns the trace alpha values along the trace trajectory
@@ -159,7 +159,7 @@ public:
 	 *
 	 * @return the brush bristle positions along the trace trajectory
 	 */
-	const vector<vector<ofVec2f>>& getBristlePositions() const;
+	const vector<vector<glm::vec2>>& getBristlePositions() const;
 
 	/**
 	 * @brief Returns the brush bristle image colors along the trace trajectory
@@ -207,7 +207,7 @@ protected:
 	/**
 	 * @brief The trace trajectory positions
 	 */
-	vector<ofVec2f> positions;
+	vector<glm::vec2> positions;
 
 	/**
 	 * @brief The bristle colors alpha values at each trajectory position
@@ -227,7 +227,7 @@ protected:
 	/**
 	 * @brief The trace bristle positions along the trajectory
 	 */
-	vector<vector<ofVec2f>> bPositions;
+	vector<vector<glm::vec2>> bPositions;
 
 	/**
 	 * @brief The trace bristle image colors along the trajectory

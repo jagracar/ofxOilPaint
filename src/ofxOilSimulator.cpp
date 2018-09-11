@@ -174,14 +174,14 @@ void ofxOilSimulator::updateVisitedPixels() {
 	} else {
 		// Update the visited pixels arrays with the trace bristle positions
 		const vector<unsigned char>& alphas = trace.getTrajectoryAphas();
-		const vector<vector<ofVec2f>>& bristlePositions = trace.getBristlePositions();
+		const vector<vector<glm::vec2>>& bristlePositions = trace.getBristlePositions();
 		int width = visitedPixels.getWidth();
 		int height = visitedPixels.getHeight();
 
 		for (unsigned int i = 0, nSteps = trace.getNSteps(); i < nSteps; ++i) {
 			// Fill the visited pixels array if alpha is high enough
 			if (alphas[i] >= ofxOilTrace::MIN_ALPHA) {
-				for (const ofVec2f& pos : bristlePositions[i]) {
+				for (const glm::vec2& pos : bristlePositions[i]) {
 					int x = pos.x;
 					int y = pos.y;
 
@@ -245,7 +245,7 @@ void ofxOilSimulator::getNewTrace() {
 			while (!isValidTrajectory && invalidTrajectoriesCounter % 500 != 499) {
 				// Create the trace starting from a bad painted pixel
 				unsigned int pixel = badPaintedPixels[floor(ofRandom(nBadPaintedPixels))];
-				ofVec2f startingPosition = ofVec2f(pixel % imgWidth, pixel / imgWidth);
+				glm::vec2 startingPosition = glm::vec2(pixel % imgWidth, pixel / imgWidth);
 				trace = ofxOilTrace(startingPosition, nSteps, TRACE_SPEED);
 
 				// Check if the trace has a valid trajectory
@@ -288,7 +288,7 @@ void ofxOilSimulator::getNewTrace() {
 
 bool ofxOilSimulator::alreadyVisitedTrajectory() const {
 	// Extract some useful information
-	const vector<ofVec2f>& positions = trace.getTrajectoryPositions();
+	const vector<glm::vec2>& positions = trace.getTrajectoryPositions();
 	const vector<unsigned char>& alphas = trace.getTrajectoryAphas();
 	int width = visitedPixels.getWidth();
 	int height = visitedPixels.getHeight();
@@ -301,7 +301,7 @@ bool ofxOilSimulator::alreadyVisitedTrajectory() const {
 		// Check that the alpha value is high enough
 		if (alphas[i] >= ofxOilTrace::MIN_ALPHA) {
 			// Check that the position is inside the image
-			const ofVec2f& pos = positions[i];
+			const glm::vec2& pos = positions[i];
 			int x = pos.x;
 			int y = pos.y;
 
@@ -320,7 +320,7 @@ bool ofxOilSimulator::alreadyVisitedTrajectory() const {
 
 bool ofxOilSimulator::validTrajectory() const {
 	// Extract some useful information
-	const vector<ofVec2f>& positions = trace.getTrajectoryPositions();
+	const vector<glm::vec2>& positions = trace.getTrajectoryPositions();
 	const vector<unsigned char>& alphas = trace.getTrajectoryAphas();
 	int width = img.getWidth();
 	int height = img.getHeight();
@@ -340,7 +340,7 @@ bool ofxOilSimulator::validTrajectory() const {
 		// Check that the alpha value is high enough
 		if (alphas[i] >= ofxOilTrace::MIN_ALPHA) {
 			// Check that the position is inside the image
-			const ofVec2f& pos = positions[i];
+			const glm::vec2& pos = positions[i];
 			int x = pos.x;
 			int y = pos.y;
 

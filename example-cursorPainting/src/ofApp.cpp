@@ -32,16 +32,16 @@ void ofApp::update() {
 
 	while (nextPathLength < currentPathLength) {
 		// Update the brush position
-		const ofVec2f& pathPoint = cursorPath.getPointAtLength(nextPathLength);
+		const glm::vec2& pathPoint = cursorPath.getPointAtLength(nextPathLength);
 		brush.updatePosition(pathPoint, true);
 
 		// Get the bristle positions
-		const vector<ofVec2f>& bristlePositions = brush.getBristlesPositions();
+		const vector<glm::vec2>& bristlePositions = brush.getBristlesPositions();
 
 		// Mix the current bristle colors with the color under the bristles positions
 		for (unsigned int i = 0; i < bristlePositions.size(); ++i) {
 			// Check that the bristle is inside the canvas
-			const ofVec2f& pos = bristlePositions[i];
+			const glm::vec2& pos = bristlePositions[i];
 			int x = pos.x;
 			int y = pos.y;
 
@@ -102,21 +102,21 @@ void ofApp::mouseMoved(int x, int y) {
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button) {
 	// Check that we moved enough
-	ofVec2f mousePos = ofVec2f(x, y);
+	glm::vec2 mousePos = glm::vec2(x, y);
 
-	if (mousePos.squareDistance(lastAddedPoint) > 5) {
+	if (glm::distance(mousePos, lastAddedPoint) > 2.5) {
 		// Add the point to the path
-		cursorPath.curveTo(mousePos);
+		cursorPath.curveTo(mousePos.x, mousePos.y);
 
 		// Save the last added point position
-		lastAddedPoint.set(mousePos);
+		lastAddedPoint = mousePos;
 	}
 }
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button) {
 	// Create a new brush
-	ofVec2f mousePos = ofVec2f(x, y);
+	glm::vec2 mousePos = glm::vec2(x, y);
 	brush = ofxOilBrush(mousePos, ofRandom(50, 70));
 
 	// Calculate the brush bristles colors
@@ -134,8 +134,8 @@ void ofApp::mousePressed(int x, int y, int button) {
 
 	// Start a new cursor path at the mouse position
 	cursorPath.clear();
-	cursorPath.curveTo(mousePos);
-	lastAddedPoint.set(mousePos);
+	cursorPath.curveTo(mousePos.x, mousePos.y);
+	lastAddedPoint = mousePos;
 
 	// Reset the next path length variable
 	nextPathLength = 0;

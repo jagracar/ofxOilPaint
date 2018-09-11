@@ -12,7 +12,7 @@ unsigned int ofxOilTrace::TYPICAL_MIX_STARTING_STEP = 5;
 
 float ofxOilTrace::MIX_STRENGTH = 0.012;
 
-ofxOilTrace::ofxOilTrace(const ofVec2f& startingPosition, unsigned int nSteps, float speed) {
+ofxOilTrace::ofxOilTrace(const glm::vec2& startingPosition, unsigned int nSteps, float speed) {
 	// Check that the input makes sense
 	if (nSteps == 0) {
 		throw invalid_argument("The trace should have at least one step.");
@@ -35,7 +35,7 @@ ofxOilTrace::ofxOilTrace(const ofVec2f& startingPosition, unsigned int nSteps, f
 	averageColor.set(0, 0);
 }
 
-ofxOilTrace::ofxOilTrace(const vector<ofVec2f>& _positions, const vector<unsigned char>& _alphas) {
+ofxOilTrace::ofxOilTrace(const vector<glm::vec2>& _positions, const vector<unsigned char>& _alphas) {
 	// Check that the input makes sense
 	if (_positions.size() == 0) {
 		throw invalid_argument("The trace should have at least one step.");
@@ -66,7 +66,7 @@ void ofxOilTrace::calculateBristlePositions() {
 	// Reset the container
 	bPositions.clear();
 
-	for (const ofVec2f& pos : positions) {
+	for (const glm::vec2& pos : positions) {
 		// Move the brush
 		brush.updatePosition(pos, false);
 
@@ -91,11 +91,11 @@ void ofxOilTrace::calculateBristleImageColors(const ofImage& img) {
 	// Calculate the image colors at the bristles positions
 	bImgColors.clear();
 
-	for (const vector<ofVec2f>& bp : bPositions) {
+	for (const vector<glm::vec2>& bp : bPositions) {
 		bImgColors.emplace_back();
 		vector<ofColor>& bic = bImgColors.back();
 
-		for (const ofVec2f& pos : bp) {
+		for (const glm::vec2& pos : bp) {
 			// Check that the bristle is inside the image
 			int x = pos.x;
 			int y = pos.y;
@@ -122,11 +122,11 @@ void ofxOilTrace::calculateBristlePaintedColors(const ofPixels& paintedPixels, c
 	// Calculate the painted colors at the bristles positions
 	bPaintedColors.clear();
 
-	for (const vector<ofVec2f>& bp : bPositions) {
+	for (const vector<glm::vec2>& bp : bPositions) {
 		bPaintedColors.emplace_back();
 		vector<ofColor>& bpc = bPaintedColors.back();
 
-		for (const ofVec2f& pos : bp) {
+		for (const glm::vec2& pos : bp) {
 			// Check that the bristle is inside the canvas
 			int x = pos.x;
 			int y = pos.y;
@@ -351,7 +351,7 @@ unsigned int ofxOilTrace::getNSteps() const {
 	return positions.size();
 }
 
-const vector<ofVec2f>& ofxOilTrace::getTrajectoryPositions() const {
+const vector<glm::vec2>& ofxOilTrace::getTrajectoryPositions() const {
 	return positions;
 }
 
@@ -367,7 +367,7 @@ unsigned int ofxOilTrace::getNBristles() const {
 	return brush.getNBristles();
 }
 
-const vector<vector<ofVec2f>>& ofxOilTrace::getBristlePositions() const {
+const vector<vector<glm::vec2>>& ofxOilTrace::getBristlePositions() const {
 	return bPositions;
 }
 
