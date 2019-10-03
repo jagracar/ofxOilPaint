@@ -16,4 +16,4 @@ Simply copy the ofxOilPaint folder into the `openFrameworks/addons/` folder.
 Compatibility
 ------------
 
-Tested with openFrameworks v0.10.0 linux64.
+Tested with openFrameworks v0.10.1 linux64.
